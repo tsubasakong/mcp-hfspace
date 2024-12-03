@@ -15,6 +15,7 @@ import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import {
   CallToolRequestSchema,
+  CallToolResultSchema,
   ListResourcesRequestSchema,
   ListToolsRequestSchema,
   ReadResourceRequestSchema,
@@ -59,7 +60,7 @@ interface ApiStructure {
   unnamed_endpoints: Record<string, ApiEndpoint>;
 }
 
-const preferred_apis = ["/infer", "/generate", "/generate_image", "/complete", "model_chat"];
+const preferred_apis = ["/predict", "/infer", "/generate", "/generate_image", "/complete", "model_chat"];
 let chosen_api = "";
 let gradio;
 
@@ -81,11 +82,6 @@ const endpoint = chosen_api && api.named_endpoints[chosen_api] ? chosen_api :
 
 // Get the parameters for the selected endpoint
 const parameters = api.named_endpoints[endpoint].parameters;
-
-console.log(`Using endpoint: ${endpoint}`);
-console.log('Parameters:', parameters);
-
-console.log(JSON.stringify(parameters,null,2));
 
 /**
  * Create an MCP server with capabilities for resources (to list/read notes),
@@ -113,8 +109,8 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
   return {
     tools: [
       {
-        name: endpoint,
-        description: `Call the ${hf_space} endpont ${endpoint}`,
+        name: endpoint.startsWith("/") ? endpoint.slice(1) : endpoint,
+        description: `Call the ${hf_space} endpoint ${endpoint}`,
         inputSchema: inputSchema,
       },
     ],
@@ -126,14 +122,33 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
  * Creates a new note with the provided title and content, and returns success message.
  */
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
-  return {
-    content: [
-      {
-        type: "text",
-        text: `Created note`,
-      },
-    ],
-  };
+  if (request.params.name === "create_note") {
+    // Handle create_note tool
+    return {
+      content: [
+        {
+          type: "text",
+          text: `Created note`,
+        },
+      ],
+    };
+  } else {
+    // Handle other tools by calling the Gradio endpoint
+    const endpoint = `/${request.params.name}`;
+    const parameters = request.params.arguments as Record<string, any>;
+
+    // Call the Gradio endpoint
+    const result = await gradio.predict(endpoint, parameters);
+
+    return {
+      content: [
+        {
+          type: "text",
+          text: `Called endpoint ${endpoint} with result: ${JSON.stringify(result)}`,
+        },
+      ],
+    } as typeof CallToolResultSchema._type;
+  }
 });
 
 /**
