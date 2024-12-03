@@ -17,6 +17,7 @@
     "inspector": "npx @modelcontextprotocol/inspector build/index.js"
   },
   "dependencies": {
+    "@gradio/client": "^1.8.0",
     "@modelcontextprotocol/sdk": "0.6.0"
   },
   "devDependencies": {
