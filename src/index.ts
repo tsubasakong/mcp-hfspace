@@ -20,8 +20,14 @@ import {
   GetPromptRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 
-
-
+// Get the HuggingFace space name from command line arguments
+const args = process.argv.slice(2);
+if (args.length < 1) {
+  console.error("Error: HuggingFace space name is required as first argument");
+  process.exit(1);
+}
+const hf_space = args[0];
+const preferred_apis = ["/infer", "/generate", "/generate_image", "/complete", "model_chat"]
 /**
  * Create an MCP server with capabilities for resources (to list/read notes),
  * tools (to create new notes), and prompts (to summarize notes).
@@ -39,8 +45,6 @@ const server = new Server(
   }
 );
 
-
-
 /**
  * Handler that lists available tools.
  * Exposes a single "create_note" tool that lets clients create new notes.
@@ -56,17 +60,17 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
           properties: {
             title: {
               type: "string",
-              description: "Title of the note"
+              description: "Title of the note",
             },
             content: {
               type: "string",
-              description: "Text content of the note"
-            }
+              description: "Text content of the note",
+            },
           },
-          required: ["title", "content"]
-        }
-      }
-    ]
+          required: ["title", "content"],
+        },
+      },
+    ],
   };
 });
 
@@ -75,28 +79,14 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
  * Creates a new note with the provided title and content, and returns success message.
  */
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
-  switch (request.params.name) {
-    case "create_note": {
-      const title = String(request.params.arguments?.title);
-      const content = String(request.params.arguments?.content);
-      if (!title || !content) {
-        throw new Error("Title and content are required");
-      }
-
-      const id = String(Object.keys(notes).length + 1);
-      notes[id] = { title, content };
-
-      return {
-        content: [{
-          type: "text",
-          text: `Created note ${id}: ${title}`
-        }]
-      };
-    }
-
-    default:
-      throw new Error("Unknown tool");
-  }
+  return {
+    content: [
+      {
+        type: "text",
+        text: `Created note`,
+      },
+    ],
+  };
 });
 
 /**
@@ -109,8 +99,8 @@ server.setRequestHandler(ListPromptsRequestSchema, async () => {
       {
         name: "summarize_notes",
         description: "Summarize all notes",
-      }
-    ]
+      },
+    ],
   };
 });
 
@@ -129,10 +119,10 @@ server.setRequestHandler(GetPromptRequestSchema, async (request) => {
         role: "user",
         content: {
           type: "text",
-          text: "Please summarize the following notes:"
-        }
+          text: "Please summarize the following notes:",
+        },
       },
-    ]
+    ],
   };
 });
 
