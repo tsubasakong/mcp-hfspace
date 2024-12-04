@@ -2,28 +2,14 @@
 
 Quick Connect to a HuggingFace Space
 
-This is a TypeScript-based MCP server that implements a simple notes system. It demonstrates core MCP concepts by providing:
+This is a TypeScript-based MCP server that implements a simple connector to a HuggingFace Space.
 
-- Resources representing text notes with URIs and metadata
-- Tools for creating new notes
-- Prompts for generating summaries of notes
+Usage: index.js space/name --function /predict --token HF_TOKEN 
 
-## Features
+This version is based on "sensible defaults" - this version will return the result[0] appropriately formatted (either as TEXT, IMAGE or RESOURCE based on content type).
 
-### Resources
-- List and access notes via `note://` URIs
-- Each note has a title, content and metadata
-- Plain text mime type for simple content access
+Use multiple instances to connect to multiple tools.
 
-### Tools
-- `create_note` - Create new text notes
-  - Takes title and content as required parameters
-  - Stores note in server state
-
-### Prompts
-- `summarize_notes` - Generate a summary of all stored notes
-  - Includes all note contents as embedded resources
-  - Returns structured prompt for LLM summarization
 
 ## Development
 

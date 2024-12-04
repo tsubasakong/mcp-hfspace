@@ -60,7 +60,14 @@ interface ApiStructure {
   unnamed_endpoints: Record<string, ApiEndpoint>;
 }
 
-const preferred_apis = ["/predict", "/infer", "/generate", "/generate_image", "/complete", "model_chat"];
+const preferred_apis = [
+  "/predict",
+  "/infer",
+  "/generate",
+  "/generate_image",
+  "/complete",
+  "model_chat",
+];
 let chosen_api = "";
 let gradio;
 
@@ -76,14 +83,18 @@ gradio = await Client.connect(hf_space);
 const api = await gradio.view_api();
 
 // Find the first matching endpoint from preferred list, or first available
-const endpoint = chosen_api && api.named_endpoints[chosen_api] ? chosen_api :  
-    preferred_apis.find(api_name => api.named_endpoints[api_name]) ||         
-    Object.keys(api.named_endpoints)[0];                                      
+const endpoint =
+  chosen_api && api.named_endpoints[chosen_api]
+    ? chosen_api
+    : preferred_apis.find((api_name) => api.named_endpoints[api_name]) ||
+      Object.keys(api.named_endpoints)[0];
 
 // Get the parameters for the selected endpoint
 const parameters = api.named_endpoints[endpoint].parameters;
-
-/**
+console.log(endpoint);
+console.log(hf_space);
+console.log(convertToJsonSchema(parameters));
+/*
  * Create an MCP server with capabilities for resources (to list/read notes),
  * tools (to create new notes), and prompts (to summarize notes).
  */
@@ -105,7 +116,9 @@ const server = new Server(
  * Exposes a single "create_note" tool that lets clients create new notes.
  */
 server.setRequestHandler(ListToolsRequestSchema, async () => {
-  const inputSchema = convertToJsonSchema(api.named_endpoints[endpoint].parameters);
+  const inputSchema = convertToJsonSchema(
+    api.named_endpoints[endpoint].parameters
+  );
   return {
     tools: [
       {
@@ -122,23 +135,31 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
  * Creates a new note with the provided title and content, and returns success message.
  */
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
-  if (request.params.name === "create_note") {
-    // Handle create_note tool
-    return {
-      content: [
-        {
-          type: "text",
-          text: `Created note`,
-        },
-      ],
-    };
-  } else {
-    // Handle other tools by calling the Gradio endpoint
-    const endpoint = `/${request.params.name}`;
-    const parameters = request.params.arguments as Record<string, any>;
 
-    // Call the Gradio endpoint
-    const result = await gradio.predict(endpoint, parameters);
+  //throw new Error(JSON.stringify(request.params._meta));
+
+
+  const progressToken = request.params._meta?.progressToken;
+  const endpoint = `/${request.params.name}`;
+  const parameters = request.params.arguments as Record<string, any>;
+
+  try {
+    const submission = gradio.submit(endpoint, parameters);
+    let result: any;
+    
+    for await (const msg of submission) {
+      if (msg.type === "data") {
+        result = msg.data;
+      } else if (msg.type === "status") {
+        if (msg.stage === "error") {
+          throw new Error(`Gradio error: ${msg.message || "Unknown error"}`);
+        }
+      }
+    }
+
+    if (!result) {
+      throw new Error("No data received from endpoint");
+    }
 
     return {
       content: [
@@ -148,6 +169,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         },
       ],
     } as typeof CallToolResultSchema._type;
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    throw new Error(`Failed to call endpoint ${endpoint}: ${errorMessage}`);
   }
 });
 
@@ -202,84 +226,88 @@ main().catch((error) => {
   process.exit(1);
 });
 
-
 function convertToJsonSchema(parameters: any[]) {
-  function pythonTypeToJsonType(pythonType: string): { type: string, format?: string } {
-      const cleanType = pythonType.replace(/\s/g, '').replace(/List\[(.*)\]/, '$1');
-      
-      switch (cleanType.toLowerCase()) {
-          case 'str':
-              return { type: 'string' };
-          case 'int':
-              return { type: 'integer' };
-          case 'float':
-              return { type: 'number' };
-          case 'bool':
-              return { type: 'boolean' };
-          case 'dict':
-              return { type: 'object' };
-          case 'datetime':
-              return { type: 'string', format: 'date-time' };
-          case 'date':
-              return { type: 'string', format: 'date' };
-          default:
-              return { type: 'string' };
-      }
+  function pythonTypeToJsonType(pythonType: string): {
+    type: string;
+    format?: string;
+  } {
+    const cleanType = pythonType
+      .replace(/\s/g, "")
+      .replace(/List\[(.*)\]/, "$1");
+
+    switch (cleanType.toLowerCase()) {
+      case "str":
+        return { type: "string" };
+      case "int":
+        return { type: "integer" };
+      case "float":
+        return { type: "number" };
+      case "bool":
+        return { type: "boolean" };
+      case "dict":
+        return { type: "object" };
+      case "datetime":
+        return { type: "string", format: "date-time" };
+      case "date":
+        return { type: "string", format: "date" };
+      default:
+        return { type: "string" };
+    }
   }
 
   const schema: {
-      type: 'object',
-      required?: string[],
-      properties: Record<string, any>
+    type: "object";
+    required?: string[];
+    properties: Record<string, any>;
   } = {
-      type: 'object',
-      required: [],
-      properties: {}
+    type: "object",
+    required: [],
+    properties: {},
   };
 
-  parameters.forEach(param => {
-      const property: any = {
-          title: param.label,
-          description: param.python_type.description || undefined
-      };
+  parameters.forEach((param) => {
+    const property: any = {
+      title: param.label || "",
+      description: param.python_type?.description || "",
+    };
 
-      // Convert Python type to JSON Schema type
-      const typeInfo = pythonTypeToJsonType(param.python_type.type);
-      Object.assign(property, typeInfo);
+    // Convert Python type to JSON Schema type
+    const typeInfo = pythonTypeToJsonType(param.python_type?.type || "str");
+    Object.assign(property, typeInfo);
 
-      // Handle arrays
-      if (param.python_type.type.startsWith('List[')) {
-          property.type = 'array';
-          property.items = pythonTypeToJsonType(
-              param.python_type.type.match(/List\[(.*)\]/)?.[1] || 'string'
-          );
-      }
+    // Handle arrays
+    if (param.python_type?.type?.startsWith("List[")) {
+      property.type = "array";
+      property.items = pythonTypeToJsonType(
+        param.python_type.type.match(/List\[(.*)\]/)?.[1] || "string"
+      );
+    }
 
-      // Add default value if it exists
-      if (param.parameter_has_default) {
-          property.default = param.parameter_default;
-      } else {
-          // If parameter_has_default is false, this parameter is required
-          schema.required = schema.required || [];
-          schema.required.push(param.parameter_name);
-      }
+    // Add default value if it exists
+    if (param.parameter_has_default) {
+      property.default = param.parameter_default;
+    } else {
+      // If parameter_has_default is false, this parameter is required
+      schema.required = schema.required || [];
+      schema.required.push(param.parameter_name);
+    }
 
-      // Add example if it exists
-      if (param.example_input !== undefined) {
-          property.examples = [param.example_input];
-      }
+    // Add example if it exists
+    if (param.example_input !== undefined) {
+      property.examples = [param.example_input];
+    }
 
-      // Add component type as a format hint
-      if (param.component) {
-          property['x-component'] = param.component;
-      }
+    // Add component type as a format hint
+    if (param.component) {
+      property["x-component"] = param.component;
+    }
 
-      schema.properties[param.parameter_name] = property;
+    schema.properties[param.parameter_name] = property;
   });
 
   // Only include required array if there are required fields
   if (schema.required && schema.required.length === 0) {
-      delete schema.required;
+    delete schema.required;
   }
 
   return schema;
