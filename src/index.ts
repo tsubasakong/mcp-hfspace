@@ -161,16 +161,20 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       throw new Error("No data received from endpoint");
     }
 
-  return {
-    content: [
-      {
-        type: "text",
-        text: `Called endpoint ${endpoint} with result: ${JSON.stringify(
-          result["data"]
-        )}`,
-      },
-    ],
-  } as typeof CallToolResultSchema._type;
+    return {
+      content: [
+        {
+          type: "text",
+          text: `Called endpoint ${endpoint} with result: ${JSON.stringify(
+            result["data"]
+          )}`,
+        },
+      ],
+    } as typeof CallToolResultSchema._type;
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    throw new Error(`Error calling endpoint: ${errorMessage}`);
+  }
 });
 
 /**
