@@ -9,8 +9,8 @@
  * - Summarizing all notes via a prompt
  */
 
-import { Client } from "@gradio/client";
-
+import { Client, Status } from "@gradio/client";
+import type { Payload } from "@gradio/client";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import {
@@ -21,6 +21,11 @@ import {
   ReadResourceRequestSchema,
   ListPromptsRequestSchema,
   GetPromptRequestSchema,
+  ProgressNotification,
+  TextContent,
+  ImageContent,
+  CallToolResult,
+  EmbeddedResource,
 } from "@modelcontextprotocol/sdk/types.js";
 
 // Just the types we need for the API structure - copied from Gradio client library
@@ -79,9 +84,8 @@ if (args.length < 1) {
 }
 
 const hf_space = args[0];
-gradio = await Client.connect(hf_space);
-const api = await gradio.view_api();
-
+gradio = await Client.connect(hf_space, { events: ["data", "status"] });
+const api = (await gradio.view_api()) as ApiStructure;
 // Find the first matching endpoint from preferred list, or first available
 const endpoint =
   chosen_api && api.named_endpoints[chosen_api]
@@ -91,9 +95,7 @@ const endpoint =
 
 // Get the parameters for the selected endpoint
 const parameters = api.named_endpoints[endpoint].parameters;
-console.log(endpoint);
-console.log(hf_space);
-console.log(convertToJsonSchema(parameters));
+
 /*
  * Create an MCP server with capabilities for resources (to list/read notes),
  * tools (to create new notes), and prompts (to summarize notes).
@@ -116,9 +118,7 @@ const server = new Server(
  * Exposes a single "create_note" tool that lets clients create new notes.
  */
 server.setRequestHandler(ListToolsRequestSchema, async () => {
-  const inputSchema = convertToJsonSchema(
-    api.named_endpoints[endpoint].parameters
-  );
+  const inputSchema = convertApiToSchema(api.named_endpoints[endpoint]);
   return {
     tools: [
       {
@@ -135,25 +135,116 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
  * Creates a new note with the provided title and content, and returns success message.
  */
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
-
-  //throw new Error(JSON.stringify(request.params._meta));
-
-
   const progressToken = request.params._meta?.progressToken;
   const endpoint = `/${request.params.name}`;
   const parameters = request.params.arguments as Record<string, any>;
 
+  let lastProgress = 0;
+
+  function createProgressNotification(
+    status: Status,
+    progressToken: string | number
+  ): ProgressNotification {
+    let progress = lastProgress;
+    const total = 100;
+
+    // Calculate progress based on different status conditions
+    if (status.progress_data?.length) {
+      const item = status.progress_data[0];
+      if (
+        item &&
+        typeof item.index === "number" &&
+        typeof item.length === "number"
+      ) {
+        // Scale progress from 10-90% during steps
+        const stepProgress = (item.index / (item.length - 1)) * 80;
+        progress = Math.round(10 + stepProgress); // Start at 10%, end at 90%
+      }
+    } else {
+      // Stage-based progress estimation as fallback
+      switch (status.stage) {
+        case "pending":
+          if (status.queue) {
+            progress = status.position === 0 ? 10 : 5;
+          } else {
+            progress = 15;
+          }
+          break;
+        case "generating":
+          progress = 50;
+          break;
+        case "complete":
+          progress = 100;
+          break;
+        case "error":
+          progress = lastProgress;
+          break;
+      }
+    }
+
+    // Ensure progress always increases and doesn't get stuck
+    progress = Math.max(progress, lastProgress);
+    if (status.stage === "complete") {
+      progress = 100;
+    } else if (progress === lastProgress && lastProgress >= 75) {
+      // If we're stuck at high progress, increment slightly
+      progress = Math.min(99, lastProgress + 1);
+    }
+
+    lastProgress = progress;
+
+    // Generate status message
+    let message = status.message;
+    if (!message) {
+      if (status.queue && status.position !== undefined) {
+        message = `Queued at position ${status.position}`;
+      } else if (status.progress_data?.length) {
+        const item = status.progress_data[0];
+        message = item.desc || `Step ${item.index + 1} of ${item.length}`;
+      } else {
+        message = status.stage.charAt(0).toUpperCase() + status.stage.slice(1);
+      }
+    }
+
+    const notification: ProgressNotification = {
+      method: "notifications/progress",
+      params: {
+        progressToken,
+        progress,
+        total,
+        message,
+        _meta: {
+          gradioStatus: {
+            stage: status.stage,
+            queue: status.queue,
+            position: status.position,
+            eta: status.eta,
+            time: status.time,
+            code: status.code,
+            success: status.success,
+            size: status.size,
+            progress_data: status.progress_data,
+          },
+        },
+      },
+    };
+
+    return notification;
+  }
+
   try {
-    const submission = gradio.submit(endpoint, parameters);
     let result: any;
-    
+    const submission = gradio.submit(endpoint, parameters);
+
     for await (const msg of submission) {
       if (msg.type === "data") {
         result = msg.data;
-      } else if (msg.type === "status") {
+      } else if (msg.type === "status" && progressToken) {
         if (msg.stage === "error") {
           throw new Error(`Gradio error: ${msg.message || "Unknown error"}`);
         }
+        const notification = createProgressNotification(msg, progressToken);
+        await server.notification(notification);
       }
     }
 
@@ -161,16 +252,19 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       throw new Error("No data received from endpoint");
     }
 
-    return {
-      content: [
-        {
+    return createToolResult(
+      api.named_endpoints[endpoint].returns,
+      { data: result }
+    );
+   // return createToolResult(api.named_endpoints[endpoint].returns, result);
+/*    return {
+      
+      content: [       {
           type: "text",
-          text: `Called endpoint ${endpoint} with result: ${JSON.stringify(
-            result["data"]
-          )}`,
+          text: `Called endpoint ${endpoint} with result: ${JSON.stringify(result)}`,
         },
       ],
-    } as typeof CallToolResultSchema._type;
+    } as typeof CallToolResultSchema._type; */
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     throw new Error(`Error calling endpoint: ${errorMessage}`);
@@ -227,90 +321,147 @@ main().catch((error) => {
   console.error("Server error:", error);
   process.exit(1);
 });
-
-function convertToJsonSchema(parameters: any[]) {
-  function pythonTypeToJsonType(pythonType: string): {
-    type: string;
-    format?: string;
-  } {
-    const cleanType = pythonType
-      .replace(/\s/g, "")
-      .replace(/List\[(.*)\]/, "$1");
-
-    switch (cleanType.toLowerCase()) {
-      case "str":
-        return { type: "string" };
-      case "int":
-        return { type: "integer" };
-      case "float":
-        return { type: "number" };
-      case "bool":
-        return { type: "boolean" };
-      case "dict":
-        return { type: "object" };
-      case "datetime":
-        return { type: "string", format: "date-time" };
-      case "date":
-        return { type: "string", format: "date" };
-      default:
-        return { type: "string" };
-    }
+function parseNumericConstraints(description: string) {
+  const match = description.match(/numeric value between (\d+) and (\d+)/);
+  if (match) {
+    return {
+      minimum: parseInt(match[1]),
+      maximum: parseInt(match[2]),
+    };
   }
+  return {};
+}
 
-  const schema: {
-    type: "object";
-    required?: string[];
-    properties: Record<string, any>;
-  } = {
-    type: "object",
-    required: [],
-    properties: {},
+function convertApiToSchema(endpoint: ApiEndpoint) {
+  // Type mapping from API to JSON Schema
+  const typeMapping: { [key: string]: string } = {
+    string: "string",
+    number: "integer",
+    boolean: "boolean",
   };
 
-  parameters.forEach((param) => {
+  const properties: { [key: string]: any } = {};
+  const required: string[] = [];
+
+  endpoint.parameters.forEach((param: any) => {
     const property: any = {
-      title: param.label || "",
-      description: param.python_type?.description || "",
+      type: typeMapping[param.type] || param.type,
     };
 
-    // Convert Python type to JSON Schema type
-    const typeInfo = pythonTypeToJsonType(param.python_type?.type || "str");
-    Object.assign(property, typeInfo);
+    // Add description if available
+    if (param.description) {
+      property.description = param.description;
+    }
 
-    // Handle arrays
-    if (param.python_type?.type?.startsWith("List[")) {
-      property.type = "array";
-      property.items = pythonTypeToJsonType(
-        param.python_type.type.match(/List\[(.*)\]/)?.[1] || "string"
+    // Add numeric constraints if available
+    if (param.type === "number" && param.python_type?.description) {
+      Object.assign(
+        property,
+        parseNumericConstraints(param.python_type.description)
       );
     }
 
-    // Add default value if it exists
+    // Add default value if available
     if (param.parameter_has_default) {
       property.default = param.parameter_default;
     } else {
-      // If parameter_has_default is false, this parameter is required
-      schema.required = schema.required || [];
-      schema.required.push(param.parameter_name);
+      // If no default, it's required
+      required.push(param.parameter_name);
     }
 
-    // Add example if it exists
-    if (param.example_input !== undefined) {
-      property.examples = [param.example_input];
-    }
-
-    // Add component type as a format hint
-    if (param.component) {
-      property["x-component"] = param.component;
-    }
-
-    schema.properties[param.parameter_name] = property;
+    properties[param.parameter_name] = property;
   });
 
-  // Only include required array if there are required fields
-  if (schema.required && schema.required.length === 0) {
-    delete schema.required;
-  }
+  return {
+    type: "object",
+    properties,
+    required: required.length > 0 ? required : undefined,
+  };
+}
 
-  return schema;
+// Type definitions for clarity
+type GradioOutput = {
+  label: string;
+  type: string;
+  python_type: {
+    type: string;
+    description: string;
+  };
+  component: string;
+  description?: string;
+};
+
+function createToolResult(
+  outputs: GradioOutput[],
+  predictResults: Payload
+): CallToolResult {
+  // Get the last result's data
+  const resultData = predictResults.data;
+  const content: Array<TextContent | ImageContent | EmbeddedResource> = [];
+
+  // Zip outputs with their values
+  outputs.forEach((output, index) => {
+    const value = resultData[index];
+
+    try {
+      // Case 1: Simple text/number types
+      if (output.type === "string" || output.type === "number") {
+        content.push({
+          type: "text",
+          text: `${output.label}: ${value}`,
+        });
+        return;
+      }
+
+      // Case 2: Chatbot component
+      if (output.component === "Chatbot" && !output.type) {
+        content.push({
+          type: "resource",
+          resource: {
+            uri: "conversation://data",
+            mimeType: "application/json",
+            text: JSON.stringify(value),
+          },
+        });
+        return;
+      }
+
+      // Case 3: Image component
+      if (output.component === "Image") {
+        
+        // Assuming value is base64 or can be converted to base64
+        content.push({
+          type: "image",
+          data: value as string, // May need conversion depending on Gradio output
+          mimeType: "image/png", // May need to detect actual type
+        });
+        return;
+      }
+
+      // Case 4: Default resource handling
+      content.push({
+        type: "resource",
+        resource:
+          typeof value === "string"
+            ? {
+                uri: `gradio://${output.label}`,
+                mimeType: "text/plain",
+                text: value,
+              }
+            : {
+                uri: `gradio://${output.label}`,
+                mimeType: "application/octet-stream",
+                blob: Buffer.from(JSON.stringify(value)).toString("base64"),
+              },
+      });
+    } catch (error) {
+      // Add error message to content if conversion fails
+      content.push({
+        type: "text",
+        text: `Error converting ${output.label}: ${(error as Error).message}`,
+      });
+    }
+  });
+
+  return { content };
 }
