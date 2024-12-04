@@ -252,19 +252,10 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       throw new Error("No data received from endpoint");
     }
 
-    return createToolResult(
-      api.named_endpoints[endpoint].returns,
-      { data: result }
-    );
-   // return createToolResult(api.named_endpoints[endpoint].returns, result);
-/*    return {
-      
-      content: [       {
-          type: "text",
-          text: `Called endpoint ${endpoint} with result: ${JSON.stringify(result)}`,
-        },
-      ],
-    } as typeof CallToolResultSchema._type; */
+    return await createToolResult(api.named_endpoints[endpoint].returns, {
+      data: result,
+    });
+
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     throw new Error(`Error calling endpoint: ${errorMessage}`);
@@ -391,69 +382,52 @@ type GradioOutput = {
   description?: string;
 };
 
-function createToolResult(
+async function createToolResult(
   outputs: GradioOutput[],
   predictResults: Payload
-): CallToolResult {
+): Promise<CallToolResult> {
   // Get the last result's data
   const resultData = predictResults.data;
   const content: Array<TextContent | ImageContent | EmbeddedResource> = [];
 
-  // Zip outputs with their values
-  outputs.forEach((output, index) => {
+  for (const [index, output] of outputs.entries()) {
     const value = resultData[index];
 
     try {
-      // Case 1: Simple text/number types
-      if (output.type === "string" || output.type === "number") {
-        content.push({
-          type: "text",
-          text: `${output.label}: ${value}`,
-        });
-        return;
-      }
+      switch (output.component) {
+        case "Chatbot":
+          content.push({
+            type: "text",
+            text: `${output.label}: ${value}`,
+          });
+          break;
 
-      // Case 2: Chatbot component
-      if (output.component === "Chatbot" && !output.type) {
-        content.push({
-          type: "resource",
-          resource: {
-            uri: "conversation://data",
-            mimeType: "application/json",
-            text: JSON.stringify(value),
-          },
-        });
-        return;
-      }
+        case "Image":
+          if (value?.url) {
+            const response = await fetch(value.url);
+            const mimeType =
+              response.headers.get("content-type") || "image/png";
+            const arrayBuffer = await response.arrayBuffer();
+            const base64Data = Buffer.from(arrayBuffer).toString("base64");
 
-      // Case 3: Image component
-      if (output.component === "Image") {
-        
-        // Assuming value is base64 or can be converted to base64
-        content.push({
-          type: "image",
-          data: value as string, // May need conversion depending on Gradio output
-          mimeType: "image/png", // May need to detect actual type
-        });
-        return;
-      }
+            content.push({
+              type: "image",
+              data: base64Data,
+              mimeType,
+            });
+          }
+          break;
 
-      // Case 4: Default resource handling
-      content.push({
-        type: "resource",
-        resource:
-          typeof value === "string"
-            ? {
-                uri: `gradio://${output.label}`,
-                mimeType: "text/plain",
-                text: value,
-              }
-            : {
-                uri: `gradio://${output.label}`,
-                mimeType: "application/octet-stream",
-                blob: Buffer.from(JSON.stringify(value)).toString("base64"),
-              },
-      });
+        default:
+          // Handle other types (text, numbers, etc)
+          if (value !== null && value !== undefined) {
+            content.push({
+              type: "text",
+              text: `${output.label}: ${value}`,
+            });
+          }
+          break;
+      }
     } catch (error) {
       // Add error message to content if conversion fails
       content.push({
@@ -461,7 +435,7 @@ function createToolResult(
         text: `Error converting ${output.label}: ${(error as Error).message}`,
       });
     }
-  });
+  }
 
   return { content };
 }
