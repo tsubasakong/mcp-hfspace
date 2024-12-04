@@ -86,15 +86,39 @@ if (args.length < 1) {
 const hf_space = args[0];
 gradio = await Client.connect(hf_space, { events: ["data", "status"] });
 const api = (await gradio.view_api()) as ApiStructure;
-// Find the first matching endpoint from preferred list, or first available
-const endpoint =
-  chosen_api && api.named_endpoints[chosen_api]
-    ? chosen_api
-    : preferred_apis.find((api_name) => api.named_endpoints[api_name]) ||
-      Object.keys(api.named_endpoints)[0];
+// Find the first matching endpoint and get its object
+const [endpointPath, selectedEndpoint] = (() => {
+  // First try chosen API if specified
+  if (chosen_api && api.named_endpoints[chosen_api]) {
+    return [chosen_api, api.named_endpoints[chosen_api]];
+  }
 
-// Get the parameters for the selected endpoint
-const parameters = api.named_endpoints[endpoint].parameters;
+  // Then try preferred APIs in named endpoints
+  const preferredApi = preferred_apis.find((api_name) => api.named_endpoints[api_name]);
+  if (preferredApi) {
+    return [preferredApi, api.named_endpoints[preferredApi]];
+  }
+
+  // Then try first named endpoint
+  const firstNamed = Object.entries(api.named_endpoints)[0];
+  if (firstNamed) {
+    return firstNamed;
+  }
+
+  // Finally try unnamed endpoints
+  const validUnnamed = Object.entries(api.unnamed_endpoints).find(([_, endpoint]) => 
+    endpoint.parameters.length > 0 && endpoint.returns.length > 0
+  );
+  
+  if (validUnnamed) {
+    return validUnnamed;
+  }
+
+  throw new Error("No valid endpoints found in the API");
+})();
+
+// Get the parameters directly from selected endpoint
+const parameters = selectedEndpoint.parameters;
 
 /*
  * Create an MCP server with capabilities for resources (to list/read notes),
@@ -118,12 +142,12 @@ const server = new Server(
  * Exposes a single "create_note" tool that lets clients create new notes.
  */
 server.setRequestHandler(ListToolsRequestSchema, async () => {
-  const inputSchema = convertApiToSchema(api.named_endpoints[endpoint]);
+  const inputSchema = convertApiToSchema(selectedEndpoint);
   return {
     tools: [
       {
-        name: endpoint.startsWith("/") ? endpoint.slice(1) : endpoint,
-        description: `Call the ${hf_space} endpoint ${endpoint}`,
+        name: endpointPath.startsWith("/") ? endpointPath.slice(1) : endpointPath,
+        description: `Call the ${hf_space} endpoint ${endpointPath}`,
         inputSchema: inputSchema,
       },
     ],
@@ -136,7 +160,6 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
  */
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
   const progressToken = request.params._meta?.progressToken;
-  const endpoint = `/${request.params.name}`;
   const parameters = request.params.arguments as Record<string, any>;
 
   let lastProgress = 0;
@@ -234,7 +257,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
   try {
     let result: any;
-    const submission = gradio.submit(endpoint, parameters);
+    const submission = gradio.submit(endpointPath, parameters);
 
     for await (const msg of submission) {
       if (msg.type === "data") {
@@ -252,7 +275,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       throw new Error("No data received from endpoint");
     }
 
-    return await createToolResult(api.named_endpoints[endpoint].returns, {
+    return await createToolResult(selectedEndpoint.returns, {
       data: result,
     });
 
