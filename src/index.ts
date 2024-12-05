@@ -7,9 +7,10 @@ import {
   ListToolsRequestSchema,
   ListPromptsRequestSchema,
   GetPromptRequestSchema,
+  CallToolResultSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 
-import { EndpointWrapper } from "./types.js";
+import { EndpointWrapper } from "./EndpointWrapper.js";
 
 // Get the HuggingFace space name from command line arguments
 const args = process.argv.slice(2);
@@ -20,8 +21,10 @@ if (args.length < 1) {
 
 const spaceName = args[0];
 const endpointName = args[1];
-const selectedEndpoint = await EndpointWrapper.createEndpoint(spaceName, endpointName);
-
+const selectedEndpoint = await EndpointWrapper.createEndpoint(
+  spaceName,
+  endpointName
+);
 
 if (!selectedEndpoint) {
   throw new Error("No valid endpoints found in the API");
@@ -35,23 +38,34 @@ const server = new Server(
   },
   {
     capabilities: {
-      tools: {},
+      tools: { listChanged: true },
       prompts: {},
+      resources: {},
     },
   }
 );
 
 server.setRequestHandler(ListToolsRequestSchema, async () => {
   return {
-    tools: [selectedEndpoint.toToolDefinition(spaceName)]
+    tools: [selectedEndpoint.toToolDefinition(spaceName)],
   };
 });
 
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
-    const progressToken = request.params._meta?.progressToken as string | number |undefined;
-    const parameters = request.params.arguments as Record<string, any>;
-    const normalizedToken = typeof progressToken === 'number' ? progressToken.toString() : progressToken;
-    return await selectedEndpoint.handleToolCall(parameters, normalizedToken, server);
+  const progressToken = request.params._meta?.progressToken as
+    | string
+    | number
+    | undefined;
+  const parameters = request.params.arguments as Record<string, any>;
+  const normalizedToken =
+    typeof progressToken === "number"
+      ? progressToken.toString()
+      : progressToken;
+  return await selectedEndpoint.handleToolCall(
+    parameters,
+    normalizedToken,
+    server
+  );
 });
 
 /**
@@ -78,7 +92,7 @@ server.setRequestHandler(GetPromptRequestSchema, async (request) => {
     throw new Error("Unknown prompt");
   }
 
-  const message = undefined===process.env.HF_TOKEN ? "foo" : "bar"; 
+  const message = undefined === process.env.HF_TOKEN ? "foo" : "bar";
 
   return {
     messages: [
