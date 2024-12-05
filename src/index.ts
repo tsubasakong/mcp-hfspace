@@ -19,16 +19,6 @@ import { ApiStructure, ApiEndpoint } from "./ApiStructure.js";
 import { createProgressNotifier, convertApiToSchema } from "./utils.js";
 import { EndpointWrapper } from "./types.js";
 
-const preferred_apis = [
-  "/predict",
-  "/infer",
-  "/generate",
-  "/generate_image",
-  "/complete",
-  "/on_submit",
-  "/model_chat",
-];
-
 // Get the HuggingFace space name from command line arguments
 const args = process.argv.slice(2);
 if (args.length < 1) {
@@ -42,9 +32,7 @@ const api = await gradio.view_api() as ApiStructure;
 const chosen_api = undefined;
 
 const selectedEndpoint = EndpointWrapper.findPreferred(api, {
-  chosenApi: chosen_api,
-  preferredApis: preferred_apis
-});
+  chosenApi: chosen_api});
 
 if (!selectedEndpoint) {
   throw new Error("No valid endpoints found in the API");

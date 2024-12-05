@@ -3,6 +3,9 @@
 import { ApiStructure, ApiEndpoint } from "./ApiStructure.js";
 import { convertApiToSchema } from "./utils.js";
 
+
+
+
 export class EndpointWrapper {
   constructor(
     private path: string,
@@ -12,9 +15,18 @@ export class EndpointWrapper {
 
   static findPreferred(api: ApiStructure, options: {
     chosenApi?: string;
-    preferredApis?: string[];
   } = {}) {
-    const { chosenApi, preferredApis = [] } = options;
+
+    const preferredApis = [
+      "/predict",
+      "/infer",
+      "/generate",
+      "/generate_image",
+      "/complete",
+      "/on_submit",
+      "/model_chat",
+    ];    
+    const { chosenApi } = options;
 
     // Try chosen API if specified
     if (chosenApi && api.named_endpoints[chosenApi]) {
