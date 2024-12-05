@@ -1,4 +1,5 @@
 
+/** represents a space + function to call */
 import { ApiStructure, ApiEndpoint } from "./ApiStructure.js";
 import { convertApiToSchema } from "./utils.js";
 
