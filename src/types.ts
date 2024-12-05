@@ -53,6 +53,9 @@ export class EndpointWrapper {
     throw new Error("No valid endpoints found in the API");
   }
 
+
+/* Endpoint Wrapper */
+
   get toolName() {
     return this.path.startsWith("/") ? this.path.slice(1) : this.path;
   }
