@@ -1,6 +1,5 @@
 #!/usr/bin/env node
 
-
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import {
@@ -79,13 +78,15 @@ server.setRequestHandler(GetPromptRequestSchema, async (request) => {
     throw new Error("Unknown prompt");
   }
 
+  const message = undefined===process.env.HF_TOKEN ? "foo" : "bar"; 
+
   return {
     messages: [
       {
         role: "user",
         content: {
           type: "text",
-          text: "Please summarize the following notes:",
+          text: `Please summarize the ${message} following notes:`,
         },
       },
     ],

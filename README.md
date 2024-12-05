@@ -4,7 +4,9 @@ Quick Connect to a HuggingFace Space
 
 This is a TypeScript-based MCP server that implements a simple connector to a HuggingFace Space.
 
-Usage: index.js space/name --function /predict --token HF_TOKEN 
+Usage: index.js space_name endpoint_name?
+
+For example: `.../build/index.js Qwen/Qwen2.5-72B-Instruct`
 
 This version is based on "sensible defaults" - this version will return the result[0] appropriately formatted (either as TEXT, IMAGE or RESOURCE based on content type).
 
@@ -12,8 +14,15 @@ Use multiple instances to connect to multiple tools.
 
 
 Some recommended spaces to try:
- - shuttleai/shuttle-3.1-aesthetic
 
+- shuttleai/shuttle-3.1-aesthetic
+- black-forest-labs/FLUX.1-schnell
+- Qwen/Qwen2.5-72B-Instruct
+
+
+## Optional Configuration
+
+HF_TOKEN environment variable to set your Hugging Face token.
 
 ## Development
 
