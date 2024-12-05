@@ -7,24 +7,18 @@ import {
   ListToolsRequestSchema,
   ListPromptsRequestSchema,
   GetPromptRequestSchema,
-  CallToolResultSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 
 import { EndpointWrapper } from "./EndpointWrapper.js";
 
-// Get the HuggingFace space name from command line arguments
+// Get the HuggingFace space path from command line arguments
 const args = process.argv.slice(2);
 if (args.length < 1) {
-  console.error("Error: HuggingFace space name is required as first argument");
+  console.error("Error: HuggingFace space path is required (format: vendor/space or vendor/space/endpoint)");
   process.exit(1);
 }
 
-const spaceName = args[0];
-const endpointName = args[1];
-const selectedEndpoint = await EndpointWrapper.createEndpoint(
-  spaceName,
-  endpointName
-);
+const selectedEndpoint = await EndpointWrapper.createEndpoint(args[0]);
 
 if (!selectedEndpoint) {
   throw new Error("No valid endpoints found in the API");
@@ -34,7 +28,7 @@ if (!selectedEndpoint) {
 const server = new Server(
   {
     name: "mcp-hfspace",
-    version: "0.1.0",
+    version: "0.2.0",
   },
   {
     capabilities: {
@@ -47,7 +41,7 @@ const server = new Server(
 
 server.setRequestHandler(ListToolsRequestSchema, async () => {
   return {
-    tools: [selectedEndpoint.toToolDefinition(spaceName)],
+    tools: [selectedEndpoint.toolDefinition()],
   };
 });
 

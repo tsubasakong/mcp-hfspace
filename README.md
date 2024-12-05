@@ -2,19 +2,21 @@
 
 Easy connect to HuggingFace Gradio Spaces. Minimal configuration needed, simply add your spaces to the arguments and go!
 
+## Basic setup
 
-Provide a list of Spaces. Specify the endpoint with "/" after the space.
-
-This is a TypeScript-based MCP server that implements a simple connector to a HuggingFace Space.
-
-Usage: index.js space_name endpoint_name?
+Supply a list of HuggingFace spaces in the arguments. mcp-hfspace will usually be able to find the most appropriate endpoint.
 
 For example: `.../build/index.js Qwen/Qwen2.5-72B-Instruct`
 
-This version is based on "sensible defaults" - this version will return the result[0] appropriately formatted (either as TEXT, IMAGE or RESOURCE based on content type).
+### Specifying API Endpoint
 
-Use multiple instances to connect to multiple tools.
+If you need, you can specify a specific API Endpoint by adding it to the spacename. So rather than passing in `Qwen/Qwen2.5-72B-Instruct` you would use `Qwen/Qwen2.5-72B-Instruct/model_chat`.
 
+### Specifying HuggingFace Token
+
+`HF_TOKEN` environment variable to set your Hugging Face token.
+
+## Recommended Spaces
 
 Some recommended spaces to try:
 
@@ -22,23 +24,22 @@ Some recommended spaces to try:
 - black-forest-labs/FLUX.1-schnell
 - Qwen/Qwen2.5-72B-Instruct
 
-## Optional Configuration
-
-HF_TOKEN environment variable to set your Hugging Face token.
-
 ## Development
 
 Install dependencies:
+
 ```bash
 npm install
 ```
 
-Build the server:
+Build the server:#
+
 ```bash
 npm run build
 ```
 
 For development with auto-rebuild:
+
 ```bash
 npm run watch
 ```

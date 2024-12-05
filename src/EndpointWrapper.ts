@@ -1,4 +1,3 @@
-
 import { Client } from "@gradio/client";
 import { ApiStructure, ApiEndpoint } from "./ApiStructure.js";
 import { convertApiToSchema } from "./utils.js";
@@ -23,8 +22,16 @@ export class EndpointWrapper {
     this.anonIndex = anonIndex;
   }
 
-  static async createEndpoint(spaceName : string, endpointName? : string |undefined){
-  
+  static async createEndpoint(spacePath: string): Promise<EndpointWrapper | null> {
+    const pathParts = spacePath.split('/');
+
+    if (pathParts.length < 2 || pathParts.length > 3) {
+      throw new Error("Invalid space path format. Use: vendor/space or vendor/space/endpoint");
+    }
+
+    const spaceName = `${pathParts[0]}/${pathParts[1]}`;
+    const endpointName = pathParts[2];
+
     const preferredApis = [
       "/predict",
       "/infer",
@@ -89,10 +96,10 @@ export class EndpointWrapper {
     return this.endpointName;
   }
 
-  toToolDefinition(spaceName: string) {
+  toolDefinition() {
     return {
       name: this.toolName,
-      description: `Call the ${spaceName} endpoint ${this.endpointName}`,
+      description: `Call the ${this.spaceName} endpoint ${this.endpointName}`,
       inputSchema: convertApiToSchema(this.endpoint),
     };
   }
