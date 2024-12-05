@@ -3,9 +3,85 @@ import { ApiStructure, ApiEndpoint } from "./ApiStructure.js";
 import { convertApiToSchema } from "./utils.js";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
-import { Payload } from "@gradio/client";
 import { TextContent, ImageContent, EmbeddedResource } from "@modelcontextprotocol/sdk/types.js";
 import { createProgressNotifier } from "./utils.js";
+
+type GradioComponent = {
+  label: string;
+  type: string;
+  python_type: {
+      type: string;
+      description: string;
+  };
+  component: string;
+};
+
+// Simple converter registry
+type ContentConverter = (value: any) => Promise<TextContent | ImageContent | EmbeddedResource>;
+
+class GradioConverter {
+    private static converters: Map<string, ContentConverter> = new Map();
+
+    static register(component: string, converter: ContentConverter) {
+        this.converters.set(component, converter);
+    }
+
+    static async convert(component: GradioComponent, value: any): Promise<TextContent | ImageContent | EmbeddedResource> {
+        const converter = this.converters.get(component.component) || this.defaultConverter;
+        return converter(value);
+    }
+
+    private static defaultConverter: ContentConverter = async (value: any) => ({
+        type: "text",
+        text: typeof value === 'string' ? value : JSON.stringify(value)
+    });
+}
+
+
+// Register basic converters
+GradioConverter.register("Image", async (value) => {
+  if (value?.url) {
+      const response = await fetch(value.url);
+      const mimeType = response.headers.get("content-type") || "image/png";
+      const arrayBuffer = await response.arrayBuffer();
+      const base64Data = Buffer.from(arrayBuffer).toString("base64");
+      return {
+          type: "image",
+          data: base64Data,
+          mimeType,
+      };
+  }
+  return {
+      type: "text",
+      text: JSON.stringify(value)
+  };
+});
+
+GradioConverter.register("Audio", async (value) => {
+  if (value?.url) {
+      const response = await fetch(value.url);
+      const mimeType = response.headers.get("content-type") || "audio/wav";
+      const arrayBuffer = await response.arrayBuffer();
+      const base64Data = Buffer.from(arrayBuffer).toString("base64");
+      return {
+          type: "resource",
+          resource: {
+              uri: `data:${mimeType};base64,${base64Data}`,
+              mimeType,
+              blob: base64Data
+          }
+      };
+  }
+  return {
+      type: "text",
+      text: JSON.stringify(value)
+  };
+});
+
+GradioConverter.register("Chatbot", async (value) => ({
+  type: "text",
+  text: JSON.stringify(value)
+}));
 
 export class EndpointWrapper {
 
@@ -18,10 +94,11 @@ export class EndpointWrapper {
     private client: Client,
     anonIndex = -1
   ) {
+
     this.spaceName = spaceName;
     this.anonIndex = anonIndex;
   }
-
+  
   static async createEndpoint(spacePath: string): Promise<EndpointWrapper | null> {
     const pathParts = spacePath.split('/');
 
@@ -46,7 +123,7 @@ export class EndpointWrapper {
 
     const gradio = await Client.connect(spaceName, { events: ["data", "status"], hf_token: process.env.HF_TOKEN});
     const api = await gradio.view_api() as ApiStructure;
-
+    
     // Try chosen API if specified
     if (endpointName && api.named_endpoints[endpointName]) {
       return new EndpointWrapper(endpointName, api.named_endpoints[endpointName], spaceName, gradio);
@@ -84,18 +161,6 @@ export class EndpointWrapper {
     return name || 'unnamed_tool';        // Fallback if empty
   }
 
-  get parameters() {
-    return this.endpoint.parameters;
-  }
-
-  get returns() {
-    return this.endpoint.returns;
-  }
-
-  get call_path() {
-    return this.endpointName;
-  }
-
   toolDefinition() {
     return {
       name: this.toolName,
@@ -125,60 +190,26 @@ export class EndpointWrapper {
             throw new Error("No data received from endpoint");
         }
 
-        return await this.createToolResult(result);
+        return await this.convertPredictResults(this.endpoint.returns, result);
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
         throw new Error(`Error calling endpoint: ${errorMessage}`);
     }
   }
-
-  private async createToolResult(predictResults: Payload): Promise<CallToolResult> {
-    const content: Array<TextContent | ImageContent | EmbeddedResource> = [];
-
-    for (const [index, output] of this.returns.entries()) {
+  
+  private async convertPredictResults(returns: GradioComponent[], predictResults: any[]): Promise<CallToolResult> {
+    const content: (TextContent | ImageContent | EmbeddedResource)[] = [];
+    
+    for (const [index, output] of returns.entries()) {
         const value = predictResults[index];
-
-        try {
-            switch (output.component) {
-                case "Chatbot":
-                    content.push({
-                        type: "text",
-                        text: `${output.label}: ${value}`,
-                    });
-                    break;
-
-                case "Image":
-                    if (value?.url) {
-                        const response = await fetch(value.url);
-                        const mimeType = response.headers.get("content-type") || "image/png";
-                        const arrayBuffer = await response.arrayBuffer();
-                        const base64Data = Buffer.from(arrayBuffer).toString("base64");
-
-                        content.push({
-                            type: "image",
-                            data: base64Data,
-                            mimeType,
-                        });
-                    }
-                    break;
-
-                default:
-                    if (value !== null && value !== undefined) {
-                        content.push({
-                            type: "text",
-                            text: `${output.label}: ${value}`,
-                        });
-                    }
-                    break;
-            }
-        } catch (error) {
-            content.push({
-                type: "text",
-                text: `Error converting ${output.label}: ${(error as Error).message}`,
-            });
-        }
+        const converted = await GradioConverter.convert(output, value);
+        content.push(converted);
     }
-
-    return { content };
+  
+    return {
+        content,
+        isError: false
+    };
   }
+   
 }
