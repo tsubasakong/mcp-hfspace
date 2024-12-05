@@ -71,43 +71,24 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   return await endpoint.handleToolCall(parameters, normalizedToken, server);
 });
 
-/**
- * Handler that lists available prompts.
- * Exposes a single "summarize_notes" prompt that summarizes all notes.
- */
 server.setRequestHandler(ListPromptsRequestSchema, async () => {
   return {
-    prompts: [
-      {
-        name: "summarize_notes",
-        description: "Summarize all notes",
-      },
-    ],
+    prompts: Array.from(endpoints.values()).map(endpoint => endpoint.promptDefinition()),
   };
 });
 
-/**
- * Handler for the summarize_notes prompt.
- * Returns a prompt that requests summarization of all notes, with the notes' contents embedded as resources.
- */
 server.setRequestHandler(GetPromptRequestSchema, async (request) => {
-  if (request.params.name !== "summarize_notes") {
-    throw new Error("Unknown prompt");
+  const promptName = request.params.name;
+  const endpoint = Array.from(endpoints.values())
+    .find(ep => ep.promptName() === promptName);
+  
+  if (!endpoint) {
+    throw new Error(`Unknown prompt: ${promptName}`);
   }
 
-  return {
-    messages: [
-      {
-        role: "user",
-        content: {
-          type: "text",
-          text: `Please summarize the following notes:`,
-        },
-      },
-    ],
-  };
+  return await endpoint.getPromptTemplate(request.params.arguments);
 });
-
+		
 /**
  * Start the server using stdio transport.
  * This allows the server to communicate via standard input/output streams.

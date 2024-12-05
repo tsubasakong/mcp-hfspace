@@ -2,7 +2,7 @@ import { Client } from "@gradio/client";
 import { ApiStructure, ApiEndpoint } from "./ApiStructure.js";
 import { convertApiToSchema } from "./utils.js";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
-import { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
+import { CallToolResult, GetPromptResult, PromptArgument, PromptMessage } from "@modelcontextprotocol/sdk/types.js";
 import { TextContent, ImageContent, EmbeddedResource } from "@modelcontextprotocol/sdk/types.js";
 import { createProgressNotifier } from "./utils.js";
 
@@ -223,5 +223,80 @@ export class EndpointWrapper {
         isError: false
     };
   }
+
+  promptName() {
+    // Keep consistent with toolName pattern
+    return this.toolName;
+  }
+
+  promptDefinition() {
+    return {
+      name: this.promptName(),
+      description: `Use the ${this.spaceName} endpoint ${this.endpointName}`,
+      arguments: this.convertToPromptArguments(this.endpoint.parameters)
+    };
+  }
+
+  private convertToPromptArguments(parameters: GradioComponent[]): PromptArgument[] {
+    return parameters.map(param => ({
+      name: param.label || param.component,
+      description: this.getParameterDescription(param),
+      required: true // Could be enhanced with actual required status if available from Gradio
+    }));
+  }
+
+  private getParameterDescription(param: GradioComponent): string {
+    const type = param.python_type?.description || param.component;
+    const baseDesc = `${type} input`;
+    
+    // Add component-specific details
+    switch (param.component) {
+      case 'Image':
+        return `${baseDesc} - Provide an image description or URL`;
+      case 'Audio':
+        return `${baseDesc} - Provide audio file URL or description`;
+      case 'Slider':
+        return `${baseDesc} - Provide a numeric value`;
+      default:
+        return baseDesc;
+    }
+  }
+
+  async getPromptTemplate(args?: Record<string, string>): Promise<GetPromptResult> {
+    const messages: PromptMessage[] = [
+      {
+        role: "user",
+        content: {
+          type: "text",
+          text: this.generatePromptText(args)
+        }
+      }
+    ];
+
+    return {
+      description: this.promptDefinition().description,
+      messages
+    };
+  }
+
+  private generatePromptText(args?: Record<string, string>): string {
+    const params = this.endpoint.parameters;
+    let text = `Using the ${this.spaceName} ${this.endpointName} endpoint:\n\n`;
+
+    if (args) {
+      // Include provided arguments
+      text += params.map(param => {
+        const value = args[param.label] || '[not provided]';
+        return `${param.label}: ${value}`;
+      }).join('\n');
+    } else {
+      // Show parameter template
+      text += params.map(param => {
+        return `${param.label}: [Provide ${param.component} input]`;
+      }).join('\n');
+    }
+
+    return text;
+  }  
    
 }
