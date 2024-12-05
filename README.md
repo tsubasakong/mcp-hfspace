@@ -1,6 +1,9 @@
 # mcp-hfspace MCP Server
 
-Quick Connect to a HuggingFace Space
+Easy connect to HuggingFace Gradio Spaces. Minimal configuration needed, simply add your spaces to the arguments and go!
+
+
+Provide a list of Spaces. Specify the endpoint with "/" after the space.
 
 This is a TypeScript-based MCP server that implements a simple connector to a HuggingFace Space.
 
@@ -18,7 +21,6 @@ Some recommended spaces to try:
 - shuttleai/shuttle-3.1-aesthetic
 - black-forest-labs/FLUX.1-schnell
 - Qwen/Qwen2.5-72B-Instruct
-
 
 ## Optional Configuration
 

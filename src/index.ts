@@ -92,15 +92,13 @@ server.setRequestHandler(GetPromptRequestSchema, async (request) => {
     throw new Error("Unknown prompt");
   }
 
-  const message = undefined === process.env.HF_TOKEN ? "foo" : "bar";
-
   return {
     messages: [
       {
         role: "user",
         content: {
           type: "text",
-          text: `Please summarize the ${message} following notes:`,
+          text: `Please summarize the following notes:`,
         },
       },
     ],

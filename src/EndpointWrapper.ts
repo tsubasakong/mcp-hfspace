@@ -36,7 +36,8 @@ export class EndpointWrapper {
       "/model_chat",
     ];    
 
-    const gradio = await Client.connect(spaceName, { events: ["data", "status"] });
+
+    const gradio = await Client.connect(spaceName, { events: ["data", "status"], hf_token: process.env.HF_TOKEN});
     const api = await gradio.view_api() as ApiStructure;
 
     // Try chosen API if specified
