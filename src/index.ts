@@ -26,13 +26,13 @@ if (args.length < 1) {
   process.exit(1);
 }
 
-const hf_space = args[0];
-const gradio = await Client.connect(hf_space, { events: ["data", "status"] });
+const spaceName = args[0];
+const endpointName = args[1];
+const gradio = await Client.connect(spaceName, { events: ["data", "status"] });
 const api = await gradio.view_api() as ApiStructure;
-const chosen_api = undefined;
 
 const selectedEndpoint = EndpointWrapper.findPreferred(api, {
-  chosenApi: chosen_api});
+  endpointName: endpointName});
 
 if (!selectedEndpoint) {
   throw new Error("No valid endpoints found in the API");
@@ -54,7 +54,7 @@ const server = new Server(
 
 server.setRequestHandler(ListToolsRequestSchema, async () => {
   return {
-    tools: [selectedEndpoint.toToolDefinition(hf_space)]
+    tools: [selectedEndpoint.toToolDefinition(spaceName)]
   };
 });
 

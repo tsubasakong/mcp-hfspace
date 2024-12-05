@@ -3,9 +3,6 @@
 import { ApiStructure, ApiEndpoint } from "./ApiStructure.js";
 import { convertApiToSchema } from "./utils.js";
 
-
-
-
 export class EndpointWrapper {
   constructor(
     private path: string,
@@ -14,7 +11,7 @@ export class EndpointWrapper {
   ) {}
 
   static findPreferred(api: ApiStructure, options: {
-    chosenApi?: string;
+    endpointName?: string;
   } = {}) {
 
     const preferredApis = [
@@ -26,11 +23,11 @@ export class EndpointWrapper {
       "/on_submit",
       "/model_chat",
     ];    
-    const { chosenApi } = options;
+    const { endpointName: endpointName } = options;
 
     // Try chosen API if specified
-    if (chosenApi && api.named_endpoints[chosenApi]) {
-      return new EndpointWrapper(chosenApi, api.named_endpoints[chosenApi], true);
+    if (endpointName && api.named_endpoints[endpointName]) {
+      return new EndpointWrapper(endpointName, api.named_endpoints[endpointName], true);
     }
 
     // Try preferred APIs
