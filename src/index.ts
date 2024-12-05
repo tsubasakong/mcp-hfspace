@@ -123,40 +123,30 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
  * Handler for the create_note tool.
  * Creates a new note with the provided title and content, and returns success message.
  */
-server.setRequestHandler(CallToolRequestSchema, async (request) => {
-  const progressToken = request.params._meta?.progressToken;
-  const parameters = request.params.arguments as Record<string, any>;
+interface ProgressNotifier {
+  notify(status: Status, progressToken: string | number): Promise<void>;
+}
 
+function createProgressNotifier(server: Server): ProgressNotifier {
   let lastProgress = 0;
 
-  function createProgressNotification(
+  function createNotification(
     status: Status,
     progressToken: string | number
   ): ProgressNotification {
     let progress = lastProgress;
     const total = 100;
 
-    // Calculate progress based on different status conditions
     if (status.progress_data?.length) {
       const item = status.progress_data[0];
-      if (
-        item &&
-        typeof item.index === "number" &&
-        typeof item.length === "number"
-      ) {
-        // Scale progress from 10-90% during steps
+      if (item && typeof item.index === "number" && typeof item.length === "number") {
         const stepProgress = (item.index / (item.length - 1)) * 80;
-        progress = Math.round(10 + stepProgress); // Start at 10%, end at 90%
+        progress = Math.round(10 + stepProgress);
       }
     } else {
-      // Stage-based progress estimation as fallback
       switch (status.stage) {
         case "pending":
-          if (status.queue) {
-            progress = status.position === 0 ? 10 : 5;
-          } else {
-            progress = 15;
-          }
+          progress = status.queue ? (status.position === 0 ? 10 : 5) : 15;
           break;
         case "generating":
           progress = 50;
@@ -170,18 +160,15 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
     }
 
-    // Ensure progress always increases and doesn't get stuck
     progress = Math.max(progress, lastProgress);
     if (status.stage === "complete") {
       progress = 100;
     } else if (progress === lastProgress && lastProgress >= 75) {
-      // If we're stuck at high progress, increment slightly
       progress = Math.min(99, lastProgress + 1);
     }
 
     lastProgress = progress;
 
-    // Generate status message
     let message = status.message;
     if (!message) {
       if (status.queue && status.position !== undefined) {
@@ -194,19 +181,32 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
     }
 
-    const notification: ProgressNotification = {
+    return {
       method: "notifications/progress",
       params: {
-      progressToken,
-      progress,
-      total,
-      message,
-      _meta: status
+        progressToken,
+        progress,
+        total,
+        message,
+        _meta: status
       },
     };
-
-    return notification;
   }
+
+  return {
+    async notify(status: Status, progressToken: string | number) {
+      if (!progressToken) return;
+      const notification = createNotification(status, progressToken);
+      await server.notification(notification);
+    }
+  };
+}
+
+// Update the CallToolRequestSchema handler
+server.setRequestHandler(CallToolRequestSchema, async (request) => {
+  const progressToken = request.params._meta?.progressToken;
+  const parameters = request.params.arguments as Record<string, any>;
+  const progressNotifier = createProgressNotifier(server);
 
   try {
     let result: any;
@@ -219,8 +219,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         if (msg.stage === "error") {
           throw new Error(`Gradio error: ${msg.message || "Unknown error"}`);
         }
-        const notification = createProgressNotification(msg, progressToken);
-        await server.notification(notification);
+        await progressNotifier.notify(msg, progressToken);
       }
     }
 
