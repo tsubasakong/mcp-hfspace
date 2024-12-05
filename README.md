@@ -58,6 +58,10 @@ On Windows: `%APPDATA%/Claude/claude_desktop_config.json`
   "mcpServers": {
     "mcp-hfspace": {
       "command": "/path/to/mcp-hfspace/build/index.js"
+      "args:" [
+        "Qwen/Qwen2-72B-Instruct",
+        "black-forest-labs/FLUX.1-schnell"
+        ]
     }
   }
 }
