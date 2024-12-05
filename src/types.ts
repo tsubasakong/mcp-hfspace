@@ -81,7 +81,10 @@ export class EndpointWrapper {
 /* Endpoint Wrapper */
 
   get toolName() {
-    return `${this.spaceName.split("/")[1]}-${this.endpointName.slice(1)}`;
+    const name = `${this.spaceName.split("/")[1]}-${this.endpointName.slice(1)}`
+      .replace(/[^a-zA-Z0-9_-]/g, '_')  // Replace invalid chars with underscore
+      .slice(0, 64);                     // Limit length to 64 chars
+    return name || 'unnamed_tool';        // Fallback if empty
   }
 
   get parameters() {
