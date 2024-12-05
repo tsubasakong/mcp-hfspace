@@ -25,7 +25,7 @@ Some recommended spaces to try:
 - shuttleai/shuttle-3.1-aesthetic
 - black-forest-labs/FLUX.1-schnell
 - Qwen/Qwen2.5-72B-Instruct
-
+nicoaspra/Create_PDF_Booklet
 ## Development
 
 Install dependencies:
