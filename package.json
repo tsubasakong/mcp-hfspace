@@ -14,10 +14,14 @@
     "build": "tsc && node -e \"require('fs').chmodSync('build/index.js', '755')\"",
     "prepare": "npm run build",
     "watch": "tsc --watch",
-    "inspector": "npx @modelcontextprotocol/inspector build/index.js"
+    "inspector": "npx @modelcontextprotocol/inspector build/index.js",
+    "test": "vitest",
+    "test:watch": "vitest watch",
+    "coverage": "vitest run --coverage"    
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "0.6.0"
+    "@modelcontextprotocol/sdk": "0.6.0",
+    "vitest": "^2.1.8"
   },
   "devDependencies": {
     "@gradio/client": "^1.8.0",

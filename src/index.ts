@@ -27,43 +27,7 @@ import {
   CallToolResult,
   EmbeddedResource,
 } from "@modelcontextprotocol/sdk/types.js";
-
-// Just the types we need for the API structure - copied from Gradio client library
-interface ApiParameter {
-  label: string;
-  parameter_name: string;
-  parameter_has_default: boolean;
-  parameter_default: any;
-  type: string;
-  python_type: {
-    type: string;
-    description: string;
-  };
-  component: string;
-  example_input?: any;
-}
-
-interface ApiEndpoint {
-  parameters: ApiParameter[];
-  returns: {
-    label: string;
-    type: string;
-    python_type: {
-      type: string;
-      description: string;
-    };
-    component: string;
-  }[];
-  type: {
-    generator: boolean;
-    cancel: boolean;
-  };
-}
-
-interface ApiStructure {
-  named_endpoints: Record<string, ApiEndpoint>;
-  unnamed_endpoints: Record<string, ApiEndpoint>;
-}
+import { ApiStructure, ApiEndpoint } from "./ApiStructure.js";
 
 const preferred_apis = [
   "/predict",
@@ -233,23 +197,11 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const notification: ProgressNotification = {
       method: "notifications/progress",
       params: {
-        progressToken,
-        progress,
-        total,
-        message,
-        _meta: {
-          gradioStatus: {
-            stage: status.stage,
-            queue: status.queue,
-            position: status.position,
-            eta: status.eta,
-            time: status.time,
-            code: status.code,
-            success: status.success,
-            size: status.size,
-            progress_data: status.progress_data,
-          },
-        },
+      progressToken,
+      progress,
+      total,
+      message,
+      _meta: status
       },
     };
 
