@@ -71,7 +71,8 @@ const preferred_apis = [
   "/generate",
   "/generate_image",
   "/complete",
-  "model_chat",
+  "/on_submit",
+  "/model_chat",
 ];
 let chosen_api = "";
 let gradio;
