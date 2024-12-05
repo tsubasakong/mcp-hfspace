@@ -20,11 +20,19 @@ type GradioOutput = {
 };
 
 export class EndpointWrapper {
+
+  private anonIndex: number;
+
   constructor(
     private endpointName: string,
     private endpoint: ApiEndpoint,
+    private spaceName: string,
     private client: Client,
-  ) {}
+    anonIndex = -1
+  ) {
+    this.spaceName = spaceName;
+    this.anonIndex = anonIndex;
+  }
 
   static async createEndpoint(spaceName : string, endpointName? : string |undefined){
   
@@ -34,6 +42,7 @@ export class EndpointWrapper {
       "/generate",
       "/generate_image",
       "/complete",
+      "/lambda",
       "/on_submit",
       "/model_chat",
     ];    
@@ -43,19 +52,19 @@ export class EndpointWrapper {
 
     // Try chosen API if specified
     if (endpointName && api.named_endpoints[endpointName]) {
-      return new EndpointWrapper(endpointName, api.named_endpoints[endpointName], gradio);
+      return new EndpointWrapper(endpointName, api.named_endpoints[endpointName], spaceName, gradio);
     }
 
     // Try preferred APIs
     const preferredApi = preferredApis.find(name => api.named_endpoints[name]);
     if (preferredApi) {
-      return new EndpointWrapper(preferredApi, api.named_endpoints[preferredApi], gradio);
+      return new EndpointWrapper(preferredApi, api.named_endpoints[preferredApi], spaceName, gradio);
     }
 
     // Try first named endpoint
     const firstNamed = Object.entries(api.named_endpoints)[0];
     if (firstNamed) {
-      return new EndpointWrapper(firstNamed[0], firstNamed[1], gradio);
+      return new EndpointWrapper(firstNamed[0], firstNamed[1], spaceName, gradio);
     }
 
     // Try unnamed endpoints
@@ -63,7 +72,7 @@ export class EndpointWrapper {
       .find(([_, endpoint]) => endpoint.parameters.length > 0 && endpoint.returns.length > 0);
     
     if (validUnnamed) {
-      return new EndpointWrapper(spaceName.split("/")[1], validUnnamed[1], gradio);
+      return new EndpointWrapper(spaceName.split("/")[1], validUnnamed[1], spaceName, gradio);
     }
 
     throw new Error("No valid endpoints found in the API");
@@ -72,7 +81,7 @@ export class EndpointWrapper {
 /* Endpoint Wrapper */
 
   get toolName() {
-    return this.endpointName.startsWith("/") ? this.endpointName.slice(1) : this.endpointName;
+    return `${this.spaceName.split("/")[1]}-${this.endpointName.slice(1)}`;
   }
 
   get parameters() {
@@ -98,7 +107,7 @@ export class EndpointWrapper {
   async handleToolCall(parameters: Record<string, any>, progressToken: string| undefined, server: Server): Promise<CallToolResult> {
     try {
         let result: any;
-        const submission = this.client.submit(this.endpointName,parameters);
+        const submission = this.client.submit(this.anonIndex < 0 ? this.endpointName : this.anonIndex, parameters);
         const progressNotifier = createProgressNotifier(server);
 
         for await (const msg of submission) {
