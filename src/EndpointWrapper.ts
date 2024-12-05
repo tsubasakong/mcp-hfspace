@@ -17,7 +17,7 @@ type GradioComponent = {
 };
 
 // Simple converter registry
-type ContentConverter = (value: any) => Promise<TextContent | ImageContent | EmbeddedResource>;
+type ContentConverter = (component: GradioComponent, value: any) => Promise<TextContent | ImageContent | EmbeddedResource>;
 
 class GradioConverter {
     private static converters: Map<string, ContentConverter> = new Map();
@@ -28,18 +28,26 @@ class GradioConverter {
 
     static async convert(component: GradioComponent, value: any): Promise<TextContent | ImageContent | EmbeddedResource> {
         const converter = this.converters.get(component.component) || this.defaultConverter;
-        return converter(value);
+        return converter(component,value);
     }
 
-    private static defaultConverter: ContentConverter = async (value: any) => ({
+    private static defaultConverter: ContentConverter = async (component, value: any) => {
+      if (component.label && (typeof value === 'string' || typeof value === 'number')) {
+        return {
+            type: "text",
+            text: `${component.label}: ${value}`
+        };
+    }
+    return {
         type: "text",
         text: typeof value === 'string' ? value : JSON.stringify(value)
-    });
+    };
+};
 }
 
 
 // Register basic converters
-GradioConverter.register("Image", async (value) => {
+GradioConverter.register("Image", async (component, value) => {
   if (value?.url) {
       const response = await fetch(value.url);
       const mimeType = response.headers.get("content-type") || "image/png";
@@ -57,7 +65,7 @@ GradioConverter.register("Image", async (value) => {
   };
 });
 
-GradioConverter.register("Audio", async (value) => {
+GradioConverter.register("Audio", async (component, value) => {
   if (value?.url) {
       const response = await fetch(value.url);
       const mimeType = response.headers.get("content-type") || "audio/wav";
@@ -78,7 +86,7 @@ GradioConverter.register("Audio", async (value) => {
   };
 });
 
-GradioConverter.register("Chatbot", async (value) => ({
+GradioConverter.register("Chatbot", async (component, value) => ({
   type: "text",
   text: JSON.stringify(value)
 }));
