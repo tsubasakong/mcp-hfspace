@@ -8,6 +8,8 @@ Supply a list of HuggingFace spaces in the arguments. mcp-hfspace will usually b
 
 For example: `.../build/index.js Qwen/Qwen2.5-72B-Instruct`
 
+![MIRO/Claude Desktop Screenshot](./2024-12-05-flux-shuttle.png)
+
 ### Specifying API Endpoint
 
 If you need, you can specify a specific API Endpoint by adding it to the spacename. So rather than passing in `Qwen/Qwen2.5-72B-Instruct` you would use `Qwen/Qwen2.5-72B-Instruct/model_chat`.

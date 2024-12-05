@@ -11,17 +11,28 @@ import {
 
 import { EndpointWrapper } from "./EndpointWrapper.js";
 
-// Get the HuggingFace space path from command line arguments
+// Get the HuggingFace space paths from command line arguments
 const args = process.argv.slice(2);
 if (args.length < 1) {
-  console.error("Error: HuggingFace space path is required (format: vendor/space or vendor/space/endpoint)");
+  console.error("Error: At least one HuggingFace space path is required (format: vendor/space or vendor/space/endpoint)");
   process.exit(1);
 }
 
-const selectedEndpoint = await EndpointWrapper.createEndpoint(args[0]);
+// Create a map to store endpoints by their tool names
+const endpoints = new Map();
 
-if (!selectedEndpoint) {
-  throw new Error("No valid endpoints found in the API");
+// Initialize all endpoints
+for (const spacePath of args) {
+  const endpoint = await EndpointWrapper.createEndpoint(spacePath);
+  if (!endpoint) {
+    console.error(`Error: No valid endpoint found for ${spacePath}`);
+    continue;
+  }
+  endpoints.set(endpoint.toolDefinition().name, endpoint);
+}
+
+if (endpoints.size === 0) {
+  throw new Error("No valid endpoints found in any of the provided spaces");
 }
 
 // Create MCP server
@@ -41,25 +52,23 @@ const server = new Server(
 
 server.setRequestHandler(ListToolsRequestSchema, async () => {
   return {
-    tools: [selectedEndpoint.toolDefinition()],
+    tools: Array.from(endpoints.values()).map(endpoint => endpoint.toolDefinition()),
   };
 });
 
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
-  const progressToken = request.params._meta?.progressToken as
-    | string
-    | number
-    | undefined;
+  const toolName = request.params.name;
+  const endpoint = endpoints.get(toolName);
+  
+  if (!endpoint) {
+    throw new Error(`Unknown tool: ${toolName}`);
+  }
+
+  const progressToken = request.params._meta?.progressToken as string | number | undefined;
   const parameters = request.params.arguments as Record<string, any>;
-  const normalizedToken =
-    typeof progressToken === "number"
-      ? progressToken.toString()
-      : progressToken;
-  return await selectedEndpoint.handleToolCall(
-    parameters,
-    normalizedToken,
-    server
-  );
+  const normalizedToken = typeof progressToken === "number" ? progressToken.toString() : progressToken;
+  
+  return await endpoint.handleToolCall(parameters, normalizedToken, server);
 });
 
 /**
