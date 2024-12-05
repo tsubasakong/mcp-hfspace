@@ -1,13 +1,5 @@
 #!/usr/bin/env node
 
-/**
- * This is a template MCP server that implements a simple notes system.
- * It demonstrates core MCP concepts like resources and tools by allowing:
- * - Listing notes as resources
- * - Reading individual notes
- * - Creating new notes via a tool
- * - Summarizing all notes via a prompt
- */
 
 import { Client, Status } from "@gradio/client";
 import type { Payload } from "@gradio/client";
@@ -15,19 +7,17 @@ import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import {
   CallToolRequestSchema,
-  CallToolResultSchema,
-  ListResourcesRequestSchema,
   ListToolsRequestSchema,
-  ReadResourceRequestSchema,
   ListPromptsRequestSchema,
   GetPromptRequestSchema,
-  ProgressNotification,
   TextContent,
   ImageContent,
   CallToolResult,
   EmbeddedResource,
 } from "@modelcontextprotocol/sdk/types.js";
 import { ApiStructure, ApiEndpoint } from "./ApiStructure.js";
+import { createProgressNotifier, convertApiToSchema } from "./utils.js";
+import { EndpointWrapper } from "./types.js";
 
 const preferred_apis = [
   "/predict",
@@ -38,8 +28,6 @@ const preferred_apis = [
   "/on_submit",
   "/model_chat",
 ];
-let chosen_api = "";
-let gradio;
 
 // Get the HuggingFace space name from command line arguments
 const args = process.argv.slice(2);
@@ -49,46 +37,20 @@ if (args.length < 1) {
 }
 
 const hf_space = args[0];
-gradio = await Client.connect(hf_space, { events: ["data", "status"] });
-const api = (await gradio.view_api()) as ApiStructure;
-// Find the first matching endpoint and get its object
-const [endpointPath, selectedEndpoint] = (() => {
-  // First try chosen API if specified
-  if (chosen_api && api.named_endpoints[chosen_api]) {
-    return [chosen_api, api.named_endpoints[chosen_api]];
-  }
+const gradio = await Client.connect(hf_space, { events: ["data", "status"] });
+const api = await gradio.view_api() as ApiStructure;
+const chosen_api = undefined;
 
-  // Then try preferred APIs in named endpoints
-  const preferredApi = preferred_apis.find((api_name) => api.named_endpoints[api_name]);
-  if (preferredApi) {
-    return [preferredApi, api.named_endpoints[preferredApi]];
-  }
+const selectedEndpoint = EndpointWrapper.findPreferred(api, {
+  chosenApi: chosen_api,
+  preferredApis: preferred_apis
+});
 
-  // Then try first named endpoint
-  const firstNamed = Object.entries(api.named_endpoints)[0];
-  if (firstNamed) {
-    return firstNamed;
-  }
-
-  // Finally try unnamed endpoints
-  const validUnnamed = Object.entries(api.unnamed_endpoints).find(([_, endpoint]) => 
-    endpoint.parameters.length > 0 && endpoint.returns.length > 0
-  );
-  
-  if (validUnnamed) {
-    return validUnnamed;
-  }
-
+if (!selectedEndpoint) {
   throw new Error("No valid endpoints found in the API");
-})();
+}
 
-// Get the parameters directly from selected endpoint
-const parameters = selectedEndpoint.parameters;
-
-/*
- * Create an MCP server with capabilities for resources (to list/read notes),
- * tools (to create new notes), and prompts (to summarize notes).
- */
+// Create MCP server
 const server = new Server(
   {
     name: "mcp-hfspace",
@@ -102,107 +64,12 @@ const server = new Server(
   }
 );
 
-/**
- * Handler that lists available tools.
- * Exposes a single "create_note" tool that lets clients create new notes.
- */
 server.setRequestHandler(ListToolsRequestSchema, async () => {
-  const inputSchema = convertApiToSchema(selectedEndpoint);
   return {
-    tools: [
-      {
-        name: endpointPath.startsWith("/") ? endpointPath.slice(1) : endpointPath,
-        description: `Call the ${hf_space} endpoint ${endpointPath}`,
-        inputSchema: inputSchema,
-      },
-    ],
+    tools: [selectedEndpoint.toToolDefinition(hf_space)]
   };
 });
 
-/**
- * Handler for the create_note tool.
- * Creates a new note with the provided title and content, and returns success message.
- */
-interface ProgressNotifier {
-  notify(status: Status, progressToken: string | number): Promise<void>;
-}
-
-function createProgressNotifier(server: Server): ProgressNotifier {
-  let lastProgress = 0;
-
-  function createNotification(
-    status: Status,
-    progressToken: string | number
-  ): ProgressNotification {
-    let progress = lastProgress;
-    const total = 100;
-
-    if (status.progress_data?.length) {
-      const item = status.progress_data[0];
-      if (item && typeof item.index === "number" && typeof item.length === "number") {
-        const stepProgress = (item.index / (item.length - 1)) * 80;
-        progress = Math.round(10 + stepProgress);
-      }
-    } else {
-      switch (status.stage) {
-        case "pending":
-          progress = status.queue ? (status.position === 0 ? 10 : 5) : 15;
-          break;
-        case "generating":
-          progress = 50;
-          break;
-        case "complete":
-          progress = 100;
-          break;
-        case "error":
-          progress = lastProgress;
-          break;
-      }
-    }
-
-    progress = Math.max(progress, lastProgress);
-    if (status.stage === "complete") {
-      progress = 100;
-    } else if (progress === lastProgress && lastProgress >= 75) {
-      progress = Math.min(99, lastProgress + 1);
-    }
-
-    lastProgress = progress;
-
-    let message = status.message;
-    if (!message) {
-      if (status.queue && status.position !== undefined) {
-        message = `Queued at position ${status.position}`;
-      } else if (status.progress_data?.length) {
-        const item = status.progress_data[0];
-        message = item.desc || `Step ${item.index + 1} of ${item.length}`;
-      } else {
-        message = status.stage.charAt(0).toUpperCase() + status.stage.slice(1);
-      }
-    }
-
-    return {
-      method: "notifications/progress",
-      params: {
-        progressToken,
-        progress,
-        total,
-        message,
-        _meta: status
-      },
-    };
-  }
-
-  return {
-    async notify(status: Status, progressToken: string | number) {
-      if (!progressToken) return;
-      const notification = createNotification(status, progressToken);
-      await server.notification(notification);
-    }
-  };
-}
-
-// Update the CallToolRequestSchema handler
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
   const progressToken = request.params._meta?.progressToken;
   const parameters = request.params.arguments as Record<string, any>;
@@ -210,7 +77,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
   try {
     let result: any;
-    const submission = gradio.submit(endpointPath, parameters);
+    const submission = gradio.submit(selectedEndpoint.call_path, parameters);
 
     for await (const msg of submission) {
       if (msg.type === "data") {
@@ -287,63 +154,6 @@ main().catch((error) => {
   console.error("Server error:", error);
   process.exit(1);
 });
-function parseNumericConstraints(description: string) {
-  const match = description.match(/numeric value between (\d+) and (\d+)/);
-  if (match) {
-    return {
-      minimum: parseInt(match[1]),
-      maximum: parseInt(match[2]),
-    };
-  }
-  return {};
-}
-
-function convertApiToSchema(endpoint: ApiEndpoint) {
-  // Type mapping from API to JSON Schema
-  const typeMapping: { [key: string]: string } = {
-    string: "string",
-    number: "integer",
-    boolean: "boolean",
-  };
-
-  const properties: { [key: string]: any } = {};
-  const required: string[] = [];
-
-  endpoint.parameters.forEach((param: any) => {
-    const property: any = {
-      type: typeMapping[param.type] || param.type,
-    };
-
-    // Add description if available
-    if (param.description) {
-      property.description = param.description;
-    }
-
-    // Add numeric constraints if available
-    if (param.type === "number" && param.python_type?.description) {
-      Object.assign(
-        property,
-        parseNumericConstraints(param.python_type.description)
-      );
-    }
-
-    // Add default value if available
-    if (param.parameter_has_default) {
-      property.default = param.parameter_default;
-    } else {
-      // If no default, it's required
-      required.push(param.parameter_name);
-    }
-
-    properties[param.parameter_name] = property;
-  });
-
-  return {
-    type: "object",
-    properties,
-    required: required.length > 0 ? required : undefined,
-  };
-}
 
 // Type definitions for clarity
 type GradioOutput = {
