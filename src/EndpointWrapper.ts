@@ -19,6 +19,11 @@ type GradioComponent = {
 // Simple converter registry
 type ContentConverter = (component: GradioComponent, value: any) => Promise<TextContent | ImageContent | EmbeddedResource>;
 
+// Type for converter functions that may not succeed
+type ConverterFn = (component: GradioComponent, value: any) => Promise<TextContent | ImageContent | EmbeddedResource | null>;
+// Default converter implementation
+const defaultConverter: ConverterFn = async () => null;
+
 class GradioConverter {
     private static converters: Map<string, ContentConverter> = new Map();
 
@@ -27,69 +32,68 @@ class GradioConverter {
     }
 
     static async convert(component: GradioComponent, value: any): Promise<TextContent | ImageContent | EmbeddedResource> {
-        const converter = this.converters.get(component.component) || this.defaultConverter;
+        const converter = this.converters.get(component.component) || withFallback(defaultConverter);
         return converter(component,value);
     }
 
-    private static defaultConverter: ContentConverter = async (component, value: any) => {
-      if (component.label && (typeof value === 'string' || typeof value === 'number')) {
-        return {
-            type: "text",
-            text: `${component.label}: ${value}`
-        };
-    }
-    return {
-        type: "text",
-        text: typeof value === 'string' ? value : JSON.stringify(value)
-    };
-};
 }
 
+// Shared text content creator
+const createTextContent = (component: GradioComponent, value: any): TextContent => {
+    const label = component.label ? `${component.label}: ` : '';
+    const text = typeof value === 'string' ? value : JSON.stringify(value);
+    return {
+        type: "text",
+        text: `${label}${text}`
+    };
+};
 
-// Register basic converters
-GradioConverter.register("Image", async (component, value) => {
-  if (value?.url) {
-      const response = await fetch(value.url);
-      const mimeType = response.headers.get("content-type") || "image/png";
-      const arrayBuffer = await response.arrayBuffer();
-      const base64Data = Buffer.from(arrayBuffer).toString("base64");
-      return {
-          type: "image",
-          data: base64Data,
-          mimeType,
-      };
-  }
-  return {
-      type: "text",
-      text: JSON.stringify(value)
-  };
-});
+// Wrapper that adds fallback behavior
+const withFallback = (converter: ConverterFn): ContentConverter => {
+    return async (component: GradioComponent, value: any) => {
+        const result = await converter(component, value);
+        return result ?? createTextContent(component, value);
+    };
+};
 
-GradioConverter.register("Audio", async (component, value) => {
-  if (value?.url) {
-      const response = await fetch(value.url);
-      const mimeType = response.headers.get("content-type") || "audio/wav";
-      const arrayBuffer = await response.arrayBuffer();
-      const base64Data = Buffer.from(arrayBuffer).toString("base64");
-      return {
-          type: "resource",
-          resource: {
-              uri: `data:${mimeType};base64,${base64Data}`,
-              mimeType,
-              blob: base64Data
-          }
-      };
-  }
-  return {
-      type: "text",
-      text: JSON.stringify(value)
-  };
-});
+// Converter implementations focus only on their specific cases
+const imageConverter: ConverterFn = async (component, value) => {
+    if (!value?.url) return null;
+    
+    const response = await fetch(value.url);
+    const mimeType = response.headers.get("content-type") || "image/png";
+    const arrayBuffer = await response.arrayBuffer();
+    const base64Data = Buffer.from(arrayBuffer).toString("base64");
+    
+    return {
+        type: "image",
+        data: base64Data,
+        mimeType,
+    };
+};
 
-GradioConverter.register("Chatbot", async (component, value) => ({
-  type: "text",
-  text: JSON.stringify(value)
-}));
+const audioConverter: ConverterFn = async (component, value) => {
+    if (!value?.url) return null;
+    
+    const response = await fetch(value.url);
+    const mimeType = response.headers.get("content-type") || "audio/wav";
+    const arrayBuffer = await response.arrayBuffer();
+    const base64Data = Buffer.from(arrayBuffer).toString("base64");
+    
+    return {
+        type: "resource",
+        resource: {
+            uri: `data:${mimeType};base64,${base64Data}`,
+            mimeType,
+            blob: base64Data
+        }
+    };
+};
+
+// Register converters with fallback behavior
+GradioConverter.register("Image", withFallback(imageConverter));
+GradioConverter.register("Audio", withFallback(audioConverter));
+GradioConverter.register("Chatbot", withFallback(async () => null));
 
 export class EndpointWrapper {
 
