@@ -11,6 +11,10 @@ This version is based on "sensible defaults" - this version will return the resu
 Use multiple instances to connect to multiple tools.
 
 
+Some recommended spaces to try:
+ - shuttleai/shuttle-3.1-aesthetic
+
+
 ## Development
 
 Install dependencies:
