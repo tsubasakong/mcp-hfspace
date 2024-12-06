@@ -1,8 +1,7 @@
-
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { Status } from "@gradio/client";
-import { ProgressNotification, Tool } from "@modelcontextprotocol/sdk/types.d.ts";
-import { ApiEndpoint } from "./ApiStructure.js";
+import type { ProgressNotification, Tool } from "@modelcontextprotocol/sdk/types.js";
+import type { ApiEndpoint, ApiParameter } from "../src/ApiStructure.js";
 
 // Type for a parameter schema in MCP Tool
 type ParameterSchema = Tool["inputSchema"]["properties"];
@@ -25,18 +24,6 @@ function parseNumberConstraints(description: string = "") {
   if (minMatch) constraints.minimum = Number(minMatch[1]);
   if (maxMatch) constraints.maximum = Number(maxMatch[1]);
   return constraints;
-}
-
-interface ApiParameter {
-  type: string;
-  python_type?: {
-    description?: string;
-    type?: string;
-  };
-  label?: string;
-  parameter_has_default?: boolean;
-  parameter_default?: any;
-  example_input?: any;
 }
 
 export function convertParameter(param: ApiParameter): ParameterSchema {
@@ -151,55 +138,22 @@ export function createProgressNotifier(server: Server): ProgressNotifier {
   };
 }
 
-function parseNumericConstraints(description: string) {
-  const match = description.match(/numeric value between (\d+) and (\d+)/);
-  if (match) {
-    return {
-      minimum: parseInt(match[1]),
-      maximum: parseInt(match[2]),
-    };
-  }
-  return {};
-}
-
 export function convertApiToSchema(endpoint: ApiEndpoint) {
-  const typeMapping: { [key: string]: string } = {
-    string: "string",
-    number: "integer",
-    boolean: "boolean",
-  };
-
   const properties: { [key: string]: any } = {};
   const required: string[] = [];
   let propertyCounter = 1;
 
   endpoint.parameters.forEach((param: any) => {
-    const property: any = {
-      // Default to string if type is empty and python_type is Any
-      type: param.type ? 
-        (typeMapping[param.type] || param.type) : 
-        ((param.python_type?.type === "Any") ? "string" : param.type),
-    };
-
-    if (param.description) {
-      property.description = param.description;
-    }
-
-    if (param.type === "number" && param.python_type?.description) {
-      Object.assign(property, parseNumericConstraints(param.python_type.description));
-    }
-
-    if (param.parameter_has_default) {
-      property.default = param.parameter_default;
-    } else {
-      // Use parameter_name, fall back to label, or generate property name
-      const paramName = param.parameter_name || param.label || `Property ${propertyCounter++}`;
-      required.push(paramName);
-    }
-
-    // Use parameter_name, fall back to label, or generate property name
+    // Get property name from parameter_name, label, or generate one
     const propertyName = param.parameter_name || param.label || `Property ${propertyCounter++}`;
-    properties[propertyName] = property;
+    
+    // Convert parameter using existing function
+    properties[propertyName] = convertParameter(param);
+
+    // Add to required if no default value
+    if (!param.parameter_has_default) {
+      required.push(propertyName);
+    }
   });
 
   return {
