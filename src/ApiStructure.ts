@@ -32,4 +32,13 @@ export interface ApiEndpoint {
 export interface ApiStructure {
   named_endpoints: Record<string, ApiEndpoint>;
   unnamed_endpoints: Record<string, ApiEndpoint>;
-}
+}export type ApiReturn = {
+  label: string;
+  type: string;
+  python_type: {
+    type: string;
+    description: string;
+  };
+  component: string;
+};
+

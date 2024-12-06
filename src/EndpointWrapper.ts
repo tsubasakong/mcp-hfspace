@@ -1,5 +1,5 @@
 import { Client } from "@gradio/client";
-import { ApiStructure, ApiEndpoint, ApiParameter } from "./ApiStructure.js";
+import { ApiStructure, ApiEndpoint, ApiParameter, ApiReturn } from "./ApiStructure.js";
 import { convertApiToSchema } from "./utils.js";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import * as fs from "fs/promises";
@@ -17,25 +17,15 @@ import type {
 } from "@modelcontextprotocol/sdk/types.d.ts";
 import { createProgressNotifier } from "./utils.js";
 
-type GradioComponent = {
-  label: string;
-  type: string;
-  python_type: {
-    type: string;
-    description: string;
-  };
-  component: string;
-};
-
 // Simple converter registry
 type ContentConverter = (
-  component: GradioComponent,
+  component: ApiReturn,
   value: any
 ) => Promise<TextContent | ImageContent | EmbeddedResource>;
 
 // Type for converter functions that may not succeed
 type ConverterFn = (
-  component: GradioComponent,
+  component: ApiReturn,
   value: any
 ) => Promise<TextContent | ImageContent | EmbeddedResource | null>;
 // Default converter implementation
@@ -49,7 +39,7 @@ class GradioConverter {
   }
 
   static async convert(
-    component: GradioComponent,
+    component: ApiReturn,
     value: any
   ): Promise<TextContent | ImageContent | EmbeddedResource> {
     const converter =
@@ -61,7 +51,7 @@ class GradioConverter {
 
 // Shared text content creator
 const createTextContent = (
-  component: GradioComponent,
+  component: ApiReturn,
   value: any
 ): TextContent => {
   const label = component.label ? `${component.label}: ` : "";
@@ -74,7 +64,7 @@ const createTextContent = (
 
 // Wrapper that adds fallback behavior
 const withFallback = (converter: ConverterFn): ContentConverter => {
-  return async (component: GradioComponent, value: any) => {
+  return async (component: ApiReturn, value: any) => {
     const result = await converter(component, value);
     return result ?? createTextContent(component, value);
   };
@@ -289,7 +279,7 @@ export class EndpointWrapper {
   }
 
   private async convertPredictResults(
-    returns: GradioComponent[],
+    returns: ApiReturn[],
     predictResults: any[]
   ): Promise<CallToolResult> {
     const content: (TextContent | ImageContent | EmbeddedResource)[] = [];
