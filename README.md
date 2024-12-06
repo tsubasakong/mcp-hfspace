@@ -1,6 +1,6 @@
 # mcp-hfspace MCP Server
 
-Easy connect to HuggingFace Gradio Spaces. Minimal configuration needed, simply add your spaces to the arguments and go!
+Easy connect to HuggingFace Gradio Spaces. Minimal configuration needed, simply add your spaces to the arguments and go! If no spaces are specified, connects to `black-forest-labs/FLUX.1-schnell` image generator by default.
 
 ## Basic setup
 
@@ -25,7 +25,13 @@ Some recommended spaces to try:
 - shuttleai/shuttle-3.1-aesthetic
 - black-forest-labs/FLUX.1-schnell
 - Qwen/Qwen2.5-72B-Instruct
-nicoaspra/Create_PDF_Booklet
+- nicoaspra/Create_PDF_Booklet
+
+**Text-to-speech:**
+
+- parler-tts/parler_tts
+- suno/bark
+
 ## Development
 
 Install dependencies:

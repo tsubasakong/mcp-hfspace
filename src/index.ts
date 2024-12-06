@@ -12,16 +12,18 @@ import {
 import { EndpointWrapper } from "./EndpointWrapper.js";
 
 // Get the HuggingFace space paths from command line arguments
-const args = process.argv.slice(2);
+let args = process.argv.slice(2);
 if (args.length < 1) {
-  console.error(
+  args = ["black-forest-labs/FLUX.1-schnell"]; // batteries included
+/*  console.error(
     "Error: At least one HuggingFace space path is required (format: vendor/space or vendor/space/endpoint)"
   );
-  process.exit(1);
+  process.exit(1);*/
 }
 
 // Create a map to store endpoints by their tool names
 const endpoints = new Map();
+
 
 // Initialize all endpoints
 for (const spacePath of args) {
@@ -95,6 +97,7 @@ server.setRequestHandler(ListPromptsRequestSchema, async () => {
 });
 
 server.setRequestHandler(GetPromptRequestSchema, async (request) => {
+
   const promptName = request.params.name;
   const endpoint = Array.from(endpoints.values()).find(
     (ep) => ep.promptName() === promptName

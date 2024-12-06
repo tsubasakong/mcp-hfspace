@@ -105,10 +105,14 @@ export function convertApiToSchema(endpoint: ApiEndpoint) {
 
   const properties: { [key: string]: any } = {};
   const required: string[] = [];
+  let propertyCounter = 1;
 
   endpoint.parameters.forEach((param: any) => {
     const property: any = {
-      type: typeMapping[param.type] || param.type,
+      // Default to string if type is empty and python_type is Any
+      type: param.type ? 
+        (typeMapping[param.type] || param.type) : 
+        ((param.python_type?.type === "Any") ? "string" : param.type),
     };
 
     if (param.description) {
@@ -122,15 +126,19 @@ export function convertApiToSchema(endpoint: ApiEndpoint) {
     if (param.parameter_has_default) {
       property.default = param.parameter_default;
     } else {
-      required.push(param.parameter_name);
+      // Use parameter_name, fall back to label, or generate property name
+      const paramName = param.parameter_name || param.label || `Property ${propertyCounter++}`;
+      required.push(paramName);
     }
 
-    properties[param.parameter_name] = property;
+    // Use parameter_name, fall back to label, or generate property name
+    const propertyName = param.parameter_name || param.label || `Property ${propertyCounter++}`;
+    properties[propertyName] = property;
   });
 
   return {
     type: "object",
     properties,
-    required: required.length > 0 ? required : undefined,
+    required,
   };
 }
