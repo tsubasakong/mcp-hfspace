@@ -2,8 +2,8 @@ import { Client } from "@gradio/client";
 import { ApiStructure, ApiEndpoint } from "./ApiStructure.js";
 import { convertApiToSchema } from "./utils.js";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
-import { CallToolResult, GetPromptResult, PromptArgument, PromptMessage } from "@modelcontextprotocol/sdk/types.js";
-import { TextContent, ImageContent, EmbeddedResource } from "@modelcontextprotocol/sdk/types.js";
+import type { CallToolResult, GetPromptResult, PromptArgument, PromptMessage } from "@modelcontextprotocol/sdk/types.d.ts";
+import type { TextContent, ImageContent, EmbeddedResource } from "@modelcontextprotocol/sdk/types.d.ts";
 import { createProgressNotifier } from "./utils.js";
 
 type GradioComponent = {
@@ -111,11 +111,11 @@ export class EndpointWrapper {
     this.anonIndex = anonIndex;
   }
   
-  static async createEndpoint(spacePath: string): Promise<EndpointWrapper | null> {
+  static async createEndpoint(spacePath: string): Promise<EndpointWrapper> {
     const pathParts = spacePath.split('/');
 
     if (pathParts.length < 2 || pathParts.length > 3) {
-      throw new Error("Invalid space path format. Use: vendor/space or vendor/space/endpoint");
+      throw new Error(`Invalid space path format [${spacePath}]. Use: vendor/space or vendor/space/endpoint`);
     }
 
     const spaceName = `${pathParts[0]}/${pathParts[1]}`;
@@ -161,7 +161,7 @@ export class EndpointWrapper {
       return new EndpointWrapper(spaceName.split("/")[1], validUnnamed[1], spaceName, gradio);
     }
 
-    throw new Error("No valid endpoints found in the API");
+    throw new Error(`No valid endpoints found for ${spacePath}`);
   }
 
 /* Endpoint Wrapper */
@@ -185,6 +185,7 @@ export class EndpointWrapper {
     try {
         let result: any;
         const submission = this.client.submit(this.anonIndex < 0 ? this.endpointName : this.anonIndex, parameters);
+        
         const progressNotifier = createProgressNotifier(server);
 
         for await (const msg of submission) {

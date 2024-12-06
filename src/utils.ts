@@ -9,12 +9,14 @@ export interface ProgressNotifier {
 }
 
 export function createProgressNotifier(server: Server): ProgressNotifier {
+  
   let lastProgress = 0;
 
   function createNotification(
     status: Status,
     progressToken: string | number
   ): ProgressNotification {
+    
     let progress = lastProgress;
     const total = 100;
 
