@@ -1,5 +1,5 @@
 import { Client } from "@gradio/client";
-import { ApiStructure, ApiEndpoint } from "./ApiStructure.js";
+import { ApiStructure, ApiEndpoint, ApiParameter } from "./ApiStructure.js";
 import { convertApiToSchema } from "./utils.js";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import * as fs from "fs/promises";
@@ -320,7 +320,7 @@ export class EndpointWrapper {
   }
 
   private convertToPromptArguments(
-    parameters: GradioComponent[]
+    parameters: ApiParameter[]
   ): PromptArgument[] {
     return parameters.map((param) => ({
       name: param.label || param.component,
@@ -329,7 +329,7 @@ export class EndpointWrapper {
     }));
   }
 
-  private getParameterDescription(param: GradioComponent): string {
+  private getParameterDescription(param: ApiParameter): string {
     const type = param.python_type?.description || param.component;
     const baseDesc = `${type} input`;
 

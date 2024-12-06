@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import type { ApiEndpoint } from "../src/ApiStructure";
-import { convertParameter } from "../build/utils";
+import { convertParameter } from "../src/utils";
 // Type for a single parameter from ApiEndpoint
 type ApiParameter = ApiEndpoint["parameters"][0];
 

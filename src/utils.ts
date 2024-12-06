@@ -1,8 +1,74 @@
 
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { Status } from "@gradio/client";
-import { ProgressNotification } from "@modelcontextprotocol/sdk/types.js";
+import { ProgressNotification, Tool } from "@modelcontextprotocol/sdk/types.d.ts";
 import { ApiEndpoint } from "./ApiStructure.js";
+
+// Type for a parameter schema in MCP Tool
+type ParameterSchema = Tool["inputSchema"]["properties"];
+
+function parseNumberConstraints(description: string = "") {
+  const constraints: { minimum?: number; maximum?: number } = {};
+  
+  // Check for "between X and Y" format
+  const betweenMatch = description.match(/between\s+(-?\d+\.?\d*)\s+and\s+(-?\d+\.?\d*)/i);
+  if (betweenMatch) {
+    constraints.minimum = Number(betweenMatch[1]);
+    constraints.maximum = Number(betweenMatch[2]);
+    return constraints;
+  }
+  
+  // Fall back to existing min/max parsing
+  const minMatch = description.match(/min(?:imum)?\s*[:=]\s*(-?\d+\.?\d*)/i);
+  const maxMatch = description.match(/max(?:imum)?\s*[:=]\s*(-?\d+\.?\d*)/i);
+  
+  if (minMatch) constraints.minimum = Number(minMatch[1]);
+  if (maxMatch) constraints.maximum = Number(maxMatch[1]);
+  return constraints;
+}
+
+interface ApiParameter {
+  type: string;
+  python_type?: {
+    description?: string;
+    type?: string;
+  };
+  label?: string;
+  parameter_has_default?: boolean;
+  parameter_default?: any;
+  example_input?: any;
+}
+
+export function convertParameter(param: ApiParameter): ParameterSchema {
+  const baseSchema = {
+    type: param.type,
+    description: param.python_type?.description || param.label || undefined,
+    ...(param.parameter_has_default && {
+      default: param.parameter_default,
+    }),
+    ...(param.example_input && {
+      examples: [param.example_input],
+    }),
+  };
+
+  // Add number constraints if it's a number type 
+  if (param.type === "number" && param.python_type?.description) {
+    const constraints = parseNumberConstraints(param.python_type.description);
+    return { ...baseSchema, ...constraints };
+  }
+
+  // Handle Literal type to extract enum values
+  if (param.python_type?.type?.startsWith("Literal[")) {
+    const enumValues = param.python_type.type
+      .slice(8, -1) // Remove "Literal[" and "]"
+      .split(",")
+      .map(value => value.trim().replace(/['"]/g, "")); // Remove quotes and trim spaces
+    return { ...baseSchema, description: param.python_type?.description || param.label || undefined, enum: enumValues };
+  }
+
+  return baseSchema;
+}
+
 
 export interface ProgressNotifier {
   notify(status: Status, progressToken: string | number): Promise<void>;

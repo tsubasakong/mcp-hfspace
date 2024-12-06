@@ -1,5 +1,5 @@
 // Just the types we need for the API structure - copied from Gradio client library
-interface ApiParameter {
+export interface ApiParameter {
   label: string;
   parameter_name: string;
   parameter_has_default: boolean;
