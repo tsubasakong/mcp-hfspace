@@ -241,3 +241,144 @@
     },
   ]
   
+
+  [
+    {
+      label: "Input",
+      parameter_name: "query",
+      parameter_has_default: false,
+      parameter_default: null,
+      type: "string",
+      python_type: {
+        type: "str",
+        description: "",
+      },
+      component: "Textbox",
+      example_input: "Hello!!",
+      description: undefined,
+    },
+    {
+      label: "Qwen2.5-72B-Instruct",
+      parameter_name: "history",
+      parameter_has_default: true,
+      parameter_default: [
+      ],
+      type: "",
+      python_type: {
+        type: "Tuple[str | Dict(file: filepath, alt_text: str | None) | Dict(component: str, value: Any, constructor_args: Dict(), props: Dict()) | None, str | Dict(file: filepath, alt_text: str | None) | Dict(component: str, value: Any, constructor_args: Dict(), props: Dict()) | None]",
+        description: "",
+      },
+      component: "Chatbot",
+      example_input: [
+        [
+          "Hello!",
+          null,
+        ],
+      ],
+      description: undefined,
+    },
+    {
+      label: "parameter_8",
+      parameter_name: "system",
+      parameter_has_default: true,
+      parameter_default: "You are Qwen, created by Alibaba Cloud. You are a helpful assistant.",
+      type: "string",
+      python_type: {
+        type: "str",
+        description: "",
+      },
+      component: "Textbox",
+      example_input: "Hello!!",
+      description: undefined,
+    },
+  ]
+
+
+
+
+  [
+    {
+      label: "Prompt",
+      parameter_name: "prompt",
+      parameter_has_default: false,
+      parameter_default: null,
+      type: "string",
+      python_type: {
+        type: "str",
+        description: "",
+      },
+      component: "Textbox",
+      example_input: "Hello!!",
+      description: undefined,
+    },
+    {
+      label: "Seed",
+      parameter_name: "seed",
+      parameter_has_default: true,
+      parameter_default: 0,
+      type: "number",
+      python_type: {
+        type: "float",
+        description: "numeric value between 0 and 2147483647",
+      },
+      component: "Slider",
+      example_input: 0,
+      description: "numeric value between 0 and 2147483647",
+    },
+    {
+      label: "Randomize seed",
+      parameter_name: "randomize_seed",
+      parameter_has_default: true,
+      parameter_default: true,
+      type: "boolean",
+      python_type: {
+        type: "bool",
+        description: "",
+      },
+      component: "Checkbox",
+      example_input: true,
+      description: undefined,
+    },
+    {
+      label: "Width",
+      parameter_name: "width",
+      parameter_has_default: true,
+      parameter_default: 1024,
+      type: "number",
+      python_type: {
+        type: "float",
+        description: "numeric value between 256 and 2048",
+      },
+      component: "Slider",
+      example_input: 256,
+      description: "numeric value between 256 and 2048",
+    },
+    {
+      label: "Height",
+      parameter_name: "height",
+      parameter_has_default: true,
+      parameter_default: 1024,
+      type: "number",
+      python_type: {
+        type: "float",
+        description: "numeric value between 256 and 2048",
+      },
+      component: "Slider",
+      example_input: 256,
+      description: "numeric value between 256 and 2048",
+    },
+    {
+      label: "Number of inference steps",
+      parameter_name: "num_inference_steps",
+      parameter_has_default: true,
+      parameter_default: 4,
+      type: "number",
+      python_type: {
+        type: "float",
+        description: "numeric value between 1 and 50",
+      },
+      component: "Slider",
+      example_input: 1,
+      description: "numeric value between 1 and 50",
+    },
+  ]

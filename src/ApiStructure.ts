@@ -5,12 +5,13 @@ interface ApiParameter {
   parameter_has_default: boolean;
   parameter_default: any;
   type: string;
-  python_type: {
+  python_type?: {
     type: string;
     description: string;
   };
   component: string;
   example_input?: any;
+  description?: string;
 }
 export interface ApiEndpoint {
   parameters: ApiParameter[];
