@@ -166,13 +166,13 @@ export class EndpointWrapper {
       "/infer",
       "/generate",
       "/generate_image",
+      "/process_prompt",
       "/complete",
       "/lambda",
       "/on_submit",
       "/model_chat",
     ];
 
-    console.error("USING TOKEN" + process.env.HF_TOKEN);
     const gradio = await Client.connect(spaceName, {
       events: ["data", "status"],
       hf_token: process.env.HF_TOKEN,

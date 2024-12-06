@@ -1,0 +1,243 @@
+[
+    {
+      label: "Input Text",
+      type: "string",
+      python_type: {
+        type: "str",
+        description: "",
+      },
+      component: "Textbox",
+      example_input: "Howdy!",
+      serializer: "StringSerializable",
+      description: undefined,
+    },
+    {
+      label: "Acoustic Prompt",
+      type: "",
+      python_type: {
+        type: "Any",
+        description: "any valid value",
+      },
+      component: "Dropdown",
+      example_input: null,
+      serializer: "SimpleSerializable",
+      description: "any valid value",
+    },
+  ]
+  
+  
+  Come back to SUNO/BARK
+  
+  [
+    {
+      label: "Input Text",
+      type: "string",
+      python_type: {
+        type: "str",
+        description: "",
+      },
+      component: "Textbox",
+      example_input: "Howdy!",
+      serializer: "StringSerializable",
+      description: undefined,
+    },
+    {
+      label: "Acoustic Prompt",
+      type: "",
+      python_type: {
+        type: "Any",
+        description: "any valid value",
+      },
+      component: "Dropdown",
+      example_input: null,
+      serializer: "SimpleSerializable",
+      description: "any valid value",
+    },
+  ]
+  
+  {
+    parameters: [
+      {
+        label: "Upload Image",
+        parameter_name: "img",
+        parameter_has_default: false,
+        parameter_default: null,
+        type: "Blob | File | Buffer",
+        python_type: {
+          type: "Dict(path: str | None (Path to a local file), url: str | None (Publicly available url or base64 encoded image), size: int | None (Size of image in bytes), orig_name: str | None (Original filename), mime_type: str | None (mime type of image), is_stream: bool (Can always be set to False), meta: Dict())",
+          description: "For input, either path or url must be provided. For output, path is always provided.",
+        },
+        component: "Image",
+        example_input: {
+          path: "https://raw.githubusercontent.com/gradio-app/gradio/main/test/test_files/bus.png",
+          meta: {
+            _type: "gradio.FileData",
+          },
+          orig_name: "bus.png",
+          url: "https://raw.githubusercontent.com/gradio-app/gradio/main/test/test_files/bus.png",
+        },
+        description: undefined,
+      },
+      {
+        label: "Object to Extract",
+        parameter_name: "prompt",
+        parameter_has_default: false,
+        parameter_default: null,
+        type: "string",
+        python_type: {
+          type: "str",
+          description: "",
+        },
+        component: "Textbox",
+        example_input: "Hello!!",
+        description: undefined,
+      },
+      {
+        label: "Background Prompt (optional)",
+        parameter_name: "bg_prompt",
+        parameter_has_default: true,
+        parameter_default: null,
+        type: "string",
+        python_type: {
+          type: "str",
+          description: "",
+        },
+        component: "Textbox",
+        example_input: "Hello!!",
+        description: undefined,
+      },
+      {
+        label: "Aspect Ratio",
+        parameter_name: "aspect_ratio",
+        parameter_has_default: true,
+        parameter_default: "1:1",
+        type: "string",
+        python_type: {
+          type: "Literal['1:1', '16:9', '9:16', '4:3']",
+          description: "",
+        },
+        component: "Dropdown",
+        example_input: "1:1",
+        description: undefined,
+      },
+      {
+        component: "state",
+        example: null,
+        parameter_default: null,
+        parameter_has_default: true,
+        parameter_name: null,
+        hidden: true,
+        description: undefined,
+        type: "",
+      },
+      {
+        label: "Object Size (%)",
+        parameter_name: "scale_percent",
+        parameter_has_default: true,
+        parameter_default: 50,
+        type: "number",
+        python_type: {
+          type: "float",
+          description: "",
+        },
+        component: "Slider",
+        example_input: 10,
+        description: "numeric value between 10 and 200",
+      },
+    ],
+    returns: [
+      {
+        label: "Combined Result",
+        type: "string",
+        python_type: {
+          type: "Dict(path: str | None (Path to a local file), url: str | None (Publicly available url or base64 encoded image), size: int | None (Size of image in bytes), orig_name: str | None (Original filename), mime_type: str | None (mime type of image), is_stream: bool (Can always be set to False), meta: Dict())",
+          description: "",
+        },
+        component: "Image",
+        description: undefined,
+      },
+      {
+        label: "Extracted Object",
+        type: "string",
+        python_type: {
+          type: "Dict(path: str | None (Path to a local file), url: str | None (Publicly available url or base64 encoded image), size: int | None (Size of image in bytes), orig_name: str | None (Original filename), mime_type: str | None (mime type of image), is_stream: bool (Can always be set to False), meta: Dict())",
+          description: "",
+        },
+        component: "Image",
+        description: undefined,
+      },
+    ],
+    type: {
+      generator: false,
+      cancel: false,
+    },
+  }
+  
+  
+  
+  [
+    {
+      label: "Input Screenshot",
+      parameter_name: "image",
+      parameter_has_default: false,
+      parameter_default: null,
+      type: "Blob | File | Buffer",
+      python_type: {
+        type: "Dict(path: str | None (Path to a local file), url: str | None (Publicly available url or base64 encoded image), size: int | None (Size of image in bytes), orig_name: str | None (Original filename), mime_type: str | None (mime type of image), is_stream: bool (Can always be set to False), meta: Dict())",
+        description: "For input, either path or url must be provided. For output, path is always provided.",
+      },
+      component: "Image",
+      example_input: {
+        path: "https://raw.githubusercontent.com/gradio-app/gradio/main/test/test_files/bus.png",
+        meta: {
+          _type: "gradio.FileData",
+        },
+        orig_name: "bus.png",
+        url: "https://raw.githubusercontent.com/gradio-app/gradio/main/test/test_files/bus.png",
+      },
+      description: undefined,
+    },
+    {
+      label: "Query",
+      parameter_name: "query",
+      parameter_has_default: false,
+      parameter_default: null,
+      type: "string",
+      python_type: {
+        type: "str",
+        description: "",
+      },
+      component: "Textbox",
+      example_input: "Hello!!",
+      description: undefined,
+    },
+    {
+      label: "Refinement Steps",
+      parameter_name: "iterations",
+      parameter_has_default: true,
+      parameter_default: 1,
+      type: "number",
+      python_type: {
+        type: "float",
+        description: "",
+      },
+      component: "Slider",
+      example_input: 1,
+      description: "numeric value between 1 and 3",
+    },
+    {
+      label: "Is Example Image",
+      parameter_name: "is_example_image",
+      parameter_has_default: true,
+      parameter_default: "False",
+      type: "string",
+      python_type: {
+        type: "Literal['True', 'False']",
+        description: "",
+      },
+      component: "Dropdown",
+      example_input: "True",
+      description: undefined,
+    },
+  ]
+  
