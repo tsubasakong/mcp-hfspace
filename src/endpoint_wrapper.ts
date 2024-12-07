@@ -1,6 +1,6 @@
 import { Client } from "@gradio/client";
-import { ApiStructure, ApiEndpoint, ApiParameter, ApiReturn } from "./ApiStructure.js";
-import { convertApiToSchema } from "./utils.js";
+import { ApiStructure, ApiEndpoint, ApiParameter, ApiReturn } from "./gradio_api.js";
+import { convertApiToSchema } from "./gradio_convert.js";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import * as fs from "fs/promises";
 import * as ps from "process";
@@ -15,7 +15,7 @@ import type {
   ImageContent,
   EmbeddedResource,
 } from "@modelcontextprotocol/sdk/types.d.ts";
-import { createProgressNotifier } from "./utils.js";
+import { createProgressNotifier } from "./gradio_convert.js";
 
 // Simple converter registry
 type ContentConverter = (

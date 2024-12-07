@@ -1,6 +1,10 @@
 # mcp-hfspace MCP Server
 
-Easy connect to HuggingFace Gradio Spaces. Minimal configuration needed, simply add your spaces to the arguments and go! If no spaces are specified, connects to `black-forest-labs/FLUX.1-schnell` image generator by default.
+Connect to [HuggingFace Spaces](https://huggingface.co/) with minimial configuration needed.
+
+Minimal configuration needed, simply add your spaces to the arguments and go! 
+
+If no spaces are specified, connects to `black-forest-labs/FLUX.1-schnell` image generator by default.
 
 ## Basic setup
 
@@ -31,6 +35,10 @@ Some recommended spaces to try:
 
 - parler-tts/parler_tts
 - suno/bark
+
+**Vision Tasks**
+
+- merve/paligemma2-vqav2
 
 ## Development
 

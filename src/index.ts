@@ -9,7 +9,7 @@ import {
   GetPromptRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 
-import { EndpointWrapper } from "./EndpointWrapper.js";
+import { EndpointWrapper } from "./endpoint_wrapper.js";
 
 // Get the HuggingFace space paths from command line arguments
 let args = process.argv.slice(2);

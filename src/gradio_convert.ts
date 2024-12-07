@@ -1,7 +1,7 @@
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { Status } from "@gradio/client";
 import type { ProgressNotification, Tool } from "@modelcontextprotocol/sdk/types.js";
-import type { ApiEndpoint, ApiParameter } from "../src/ApiStructure.js";
+import type { ApiEndpoint, ApiParameter } from "./gradio_api.js";
 
 // Type for a parameter schema in MCP Tool
 type ParameterSchema = Tool["inputSchema"]["properties"];
@@ -55,6 +55,32 @@ export function convertParameter(param: ApiParameter): ParameterSchema {
 
   return baseSchema;
 }
+
+export function convertApiToSchema(endpoint: ApiEndpoint) {
+  const properties: { [key: string]: any } = {};
+  const required: string[] = [];
+  let propertyCounter = 1;
+
+  endpoint.parameters.forEach((param: any) => {
+    // Get property name from parameter_name, label, or generate one
+    const propertyName = param.parameter_name || param.label || `Property ${propertyCounter++}`;
+    
+    // Convert parameter using existing function
+    properties[propertyName] = convertParameter(param);
+
+    // Add to required if no default value
+    if (!param.parameter_has_default) {
+      required.push(propertyName);
+    }
+  });
+
+  return {
+    type: "object",
+    properties,
+    required,
+  };
+}
+
 
 
 export interface ProgressNotifier {
@@ -135,30 +161,5 @@ export function createProgressNotifier(server: Server): ProgressNotifier {
       const notification = createNotification(status, progressToken);
       await server.notification(notification);
     }
-  };
-}
-
-export function convertApiToSchema(endpoint: ApiEndpoint) {
-  const properties: { [key: string]: any } = {};
-  const required: string[] = [];
-  let propertyCounter = 1;
-
-  endpoint.parameters.forEach((param: any) => {
-    // Get property name from parameter_name, label, or generate one
-    const propertyName = param.parameter_name || param.label || `Property ${propertyCounter++}`;
-    
-    // Convert parameter using existing function
-    properties[propertyName] = convertParameter(param);
-
-    // Add to required if no default value
-    if (!param.parameter_has_default) {
-      required.push(propertyName);
-    }
-  });
-
-  return {
-    type: "object",
-    properties,
-    required,
   };
 }
