@@ -69,20 +69,20 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   if (!endpoint) {
     throw new Error(`Unknown tool: ${request.params.name}`);
   }
-  try {
-    return await endpoint.call(request, server);
-  } catch (error) {
-    if (error instanceof Error) {
-      return {
-        content: [{
-          type: "text",
-          text: error.message
-        }],
-        isError: true
-      };
-    }
-    throw error;
-  }
+// //  try {
+     return await endpoint.call(request, server);
+//   } catch (error) {
+//     if (error instanceof Error) {
+//       return {
+//         content: [{
+//           type: "text",
+//           text: error.message
+//         }],
+//         isError: true
+//       };
+//     }
+//     throw error;
+//   }
 
 });
 
