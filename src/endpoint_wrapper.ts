@@ -6,7 +6,7 @@ import {
   ApiParameter,
   ApiReturn,
 } from "./gradio_api.js";
-import { convertApiToSchema } from "./gradio_convert.js";
+import { convertApiToSchema, isFileParameter } from "./gradio_convert.js";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import * as fs from "fs/promises";
 import * as ps from "process";
@@ -57,12 +57,12 @@ export class EndpointWrapper {
       "/predict",
       "/infer",
       "/generate",
+      "/complete",
+      "/model_chat",
+      "/lambda",
       "/generate_image",
       "/process_prompt",
-      "/complete",
-      "/lambda",
       "/on_submit",
-      "/model_chat",
     ];
 
     const gradio = await Client.connect(spaceName, {
@@ -149,11 +149,16 @@ export class EndpointWrapper {
       | number
       | undefined;
 
-
     const parameters = request.params.arguments as Record<string, any>;
+    
+    // Get the endpoint parameters to check against
+    const endpointParams = this.endpoint.parameters;
+    
+    // Process each parameter, applying handle_file for file inputs
     for (const [key, value] of Object.entries(parameters)) {
-      if (key === "inputs" && typeof value === "string") {
-        parameters[key] =  handle_file(value);
+      const param = endpointParams.find(p => p.parameter_name === key || p.label === key);
+      if (param && isFileParameter(param) && typeof value === "string") {
+        parameters[key] = handle_file(value);
       }
     }
 

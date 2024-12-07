@@ -58,10 +58,26 @@ const withFallback = (converter: ConverterFn): ContentConverter => {
   };
 };
 
-// Converter implementations focus only on their specific cases
-const convertUrlToBase64 = async (url: string, defaultMimeType: string) => {
+// Add these helper functions before convertUrlToBase64
+const isImageMimeType = (mimeType: string) => mimeType.startsWith('image/');
+const isAudioMimeType = (mimeType: string) => mimeType.startsWith('audio/');
+
+const convertUrlToBase64 = async (url: string, expectedMimeType: string) => {
   const response = await fetch(url);
-  const mimeType = response.headers.get("content-type") || defaultMimeType;
+  if (!response.ok) {
+    throw new Error(`Failed to fetch resource: ${response.status} ${response.statusText}`);
+  }
+  
+  const mimeType = response.headers.get("content-type") || expectedMimeType;
+  
+  // Validate MIME type based on expected type
+  if (expectedMimeType.startsWith('image/') && !isImageMimeType(mimeType)) {
+    throw new Error(`Expected image type but got: ${mimeType}`);
+  }
+  if (expectedMimeType.startsWith('audio/') && !isAudioMimeType(mimeType)) {
+    throw new Error(`Expected audio type but got: ${mimeType}`);
+  }
+
   const arrayBuffer = await response.arrayBuffer();
   const base64Data = Buffer.from(arrayBuffer).toString("base64");
   return { mimeType, base64Data, arrayBuffer };
@@ -84,42 +100,58 @@ const saveFile = async (
 
 const imageConverter: ConverterFn = async (_component, value) => {
   if (!value?.url) return null;
-  const { mimeType, base64Data, arrayBuffer } = await convertUrlToBase64(
-    value.url,
-    "image/png"
-  );
-  await saveFile(arrayBuffer, mimeType, "downloaded_image");
-  return {
-    type: "image",
-    data: base64Data,
-    mimeType,
-  };
+  try {
+    const { mimeType, base64Data, arrayBuffer } = await convertUrlToBase64(
+      value.url,
+      "image/png"
+    );
+    await saveFile(arrayBuffer, mimeType, "downloaded_image");
+    return {
+      type: "image",
+      data: base64Data,
+      mimeType,
+    };
+  } catch (error) {
+    console.error('Image conversion failed:', error);
+    return {
+      type: "text",
+      text: `Failed to load image: ${(error as Error).message}`,
+    };
+  }
 };
 
 const audioConverter: ConverterFn = async (_component, value) => {
   if (!value?.url) return null;
-  const { mimeType, base64Data, arrayBuffer } = await convertUrlToBase64(
-    value.url,
-    "audio/wav"
-  );
-  const filename = await saveFile(arrayBuffer, mimeType, "downloaded_audio");
-  if (config.claudeDesktopMode) {
+  try {
+    const { mimeType, base64Data, arrayBuffer } = await convertUrlToBase64(
+      value.url,
+      "audio/wav"
+    );
+    const filename = await saveFile(arrayBuffer, mimeType, "downloaded_audio");
+    if (config.claudeDesktopMode) {
+      return {
+        type: "resource",
+        resource: {
+          uri: `${pathToFileURL(path.resolve(filename)).href}`,
+          mimeType,
+          text: `Your audio was succesfully created and is available for playback. Claude does not currently support audio content`,
+        },
+      };
+    } else {
+      return {
+        type: "resource",
+        resource: {
+          uri: `${pathToFileURL(path.resolve(filename)).href}`,
+          mimeType,
+          blob: base64Data,
+        },
+      };
+    }
+  } catch (error) {
+    console.error('Audio conversion failed:', error);
     return {
-      type: "resource",
-      resource: {
-        uri: `${pathToFileURL(path.resolve(filename)).href}`,
-        mimeType,
-        text: `Your audio was succesfully created and is available for playback. Claude does not currently support audio content`,
-      },
-    };
-  } else {
-    return {
-      type: "resource",
-      resource: {
-        uri: `${pathToFileURL(path.resolve(filename)).href}`,
-        mimeType,
-        blob: base64Data,
-      },
+      type: "text",
+      text: `Failed to load audio: ${(error as Error).message}`,
     };
   }
 };
