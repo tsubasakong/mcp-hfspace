@@ -27,8 +27,36 @@ function parseNumberConstraints(description: string = "") {
 }
 
 export function convertParameter(param: ApiParameter): ParameterSchema {
+  // Handle file types first
+  if (param.python_type?.type === "filepath") {
+    let fileDescription = "Accepts: URL, file path, or resource identifier";
+    
+    if (param.component === "Audio") {
+      fileDescription = "Accepts: Audio file URL, file path, or resource identifier";
+    } else if (param.component === "Image") {
+      fileDescription = "Accepts: Image file URL, file path, or resource identifier";
+    }
+
+    return {
+      type: "string",
+      description: fileDescription,
+      ...(param.example_input && {
+        examples: [param.example_input.url || param.example_input.path]
+      }),
+    };
+  }
+
+  // Handle Blob | File | Buffer type
+  if (param.type === "Blob | File | Buffer") {
+    return {
+      type: "string",
+      description: "Accepts: URL, file path, or resource identifier",
+      examples: [param.example_input?.url || param.example_input?.path].filter(Boolean),
+    };
+  }
+
   const baseSchema = {
-    type: param.type,
+    type: param.type || "string", // Default to string type if empty
     description: param.python_type?.description || param.label || undefined,
     ...(param.parameter_has_default && {
       default: param.parameter_default,
@@ -80,8 +108,6 @@ export function convertApiToSchema(endpoint: ApiEndpoint) {
     required,
   };
 }
-
-
 
 export interface ProgressNotifier {
   notify(status: Status, progressToken: string | number): Promise<void>;

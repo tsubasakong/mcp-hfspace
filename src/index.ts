@@ -43,11 +43,11 @@ if (endpoints.size === 0) {
 const server = new Server(
   {
     name: "mcp-hfspace",
-    version: "0.2.0",
+    version: "0.3.0",
   },
   {
     capabilities: {
-      tools: { listChanged: true },
+      tools: { },
       prompts: {},
       resources: {},
     },

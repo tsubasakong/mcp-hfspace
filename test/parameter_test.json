@@ -382,3 +382,326 @@
       description: "numeric value between 1 and 50",
     },
   ]
+
+
+  TRELLIS:
+    {
+      "/preprocess_image": {
+        parameters: [
+          {
+            label: "Image Prompt",
+            parameter_name: "image",
+            parameter_has_default: false,
+            parameter_default: null,
+            type: "Blob | File | Buffer",
+            python_type: {
+              type: "filepath",
+              description: "",
+            },
+            component: "Image",
+            example_input: {
+              path: "https://raw.githubusercontent.com/gradio-app/gradio/main/test/test_files/bus.png",
+              meta: {
+                _type: "gradio.FileData",
+              },
+              orig_name: "bus.png",
+              url: "https://raw.githubusercontent.com/gradio-app/gradio/main/test/test_files/bus.png",
+            },
+            description: undefined,
+          },
+        ],
+        returns: [
+          {
+            label: "value_29",
+            type: "string",
+            python_type: {
+              type: "str",
+              description: "",
+            },
+            component: "Textbox",
+            description: undefined,
+          },
+          {
+            label: "Image Prompt",
+            type: "string",
+            python_type: {
+              type: "filepath",
+              description: "",
+            },
+            component: "Image",
+            description: undefined,
+          },
+        ],
+        type: {
+          generator: false,
+          cancel: false,
+        },
+      },
+      "/lambda": {
+        parameters: [
+        ],
+        returns: [
+          {
+            label: "value_29",
+            type: "string",
+            python_type: {
+              type: "str",
+              description: "",
+            },
+            component: "Textbox",
+            description: undefined,
+          },
+        ],
+        type: {
+          generator: false,
+          cancel: false,
+        },
+      },
+      "/image_to_3d": {
+        parameters: [
+          {
+            label: "parameter_29",
+            parameter_name: "trial_id",
+            parameter_has_default: false,
+            parameter_default: null,
+            type: "string",
+            python_type: {
+              type: "str",
+              description: "",
+            },
+            component: "Textbox",
+            example_input: "Hello!!",
+            description: undefined,
+          },
+          {
+            label: "Seed",
+            parameter_name: "seed",
+            parameter_has_default: true,
+            parameter_default: 0,
+            type: "number",
+            python_type: {
+              type: "float",
+              description: "numeric value between 0 and 2147483647",
+            },
+            component: "Slider",
+            example_input: 0,
+            description: "numeric value between 0 and 2147483647",
+          },
+          {
+            label: "Randomize Seed",
+            parameter_name: "randomize_seed",
+            parameter_has_default: true,
+            parameter_default: true,
+            type: "boolean",
+            python_type: {
+              type: "bool",
+              description: "",
+            },
+            component: "Checkbox",
+            example_input: true,
+            description: undefined,
+          },
+          {
+            label: "Guidance Strength",
+            parameter_name: "ss_guidance_strength",
+            parameter_has_default: true,
+            parameter_default: 7.5,
+            type: "number",
+            python_type: {
+              type: "float",
+              description: "numeric value between 0.0 and 10.0",
+            },
+            component: "Slider",
+            example_input: 0,
+            description: "numeric value between 0.0 and 10.0",
+          },
+          {
+            label: "Sampling Steps",
+            parameter_name: "ss_sampling_steps",
+            parameter_has_default: true,
+            parameter_default: 12,
+            type: "number",
+            python_type: {
+              type: "float",
+              description: "numeric value between 1 and 50",
+            },
+            component: "Slider",
+            example_input: 1,
+            description: "numeric value between 1 and 50",
+          },
+          {
+            label: "Guidance Strength",
+            parameter_name: "slat_guidance_strength",
+            parameter_has_default: true,
+            parameter_default: 3,
+            type: "number",
+            python_type: {
+              type: "float",
+              description: "numeric value between 0.0 and 10.0",
+            },
+            component: "Slider",
+            example_input: 0,
+            description: "numeric value between 0.0 and 10.0",
+          },
+          {
+            label: "Sampling Steps",
+            parameter_name: "slat_sampling_steps",
+            parameter_has_default: true,
+            parameter_default: 12,
+            type: "number",
+            python_type: {
+              type: "float",
+              description: "numeric value between 1 and 50",
+            },
+            component: "Slider",
+            example_input: 1,
+            description: "numeric value between 1 and 50",
+          },
+        ],
+        returns: [
+          {
+            label: "Generated 3D Asset",
+            type: "",
+            python_type: {
+              type: "Dict(video: filepath, subtitles: filepath | None)",
+              description: "",
+            },
+            component: "Video",
+            description: undefined,
+          },
+        ],
+        type: {
+          generator: false,
+          cancel: false,
+        },
+      },
+      "/activate_button": {
+        parameters: [
+        ],
+        returns: [
+        ],
+        type: {
+          generator: false,
+          cancel: false,
+        },
+      },
+      "/deactivate_button": {
+        parameters: [
+        ],
+        returns: [
+        ],
+        type: {
+          generator: false,
+          cancel: false,
+        },
+      },
+      "/extract_glb": {
+        parameters: [
+          {
+            component: "state",
+            example: null,
+            parameter_default: null,
+            parameter_has_default: true,
+            parameter_name: null,
+            hidden: true,
+            description: undefined,
+            type: "",
+          },
+          {
+            label: "Simplify",
+            parameter_name: "mesh_simplify",
+            parameter_has_default: true,
+            parameter_default: 0.95,
+            type: "number",
+            python_type: {
+              type: "float",
+              description: "numeric value between 0.9 and 0.98",
+            },
+            component: "Slider",
+            example_input: 0.9,
+            description: "numeric value between 0.9 and 0.98",
+          },
+          {
+            label: "Texture Size",
+            parameter_name: "texture_size",
+            parameter_has_default: true,
+            parameter_default: 1024,
+            type: "number",
+            python_type: {
+              type: "float",
+              description: "numeric value between 512 and 2048",
+            },
+            component: "Slider",
+            example_input: 512,
+            description: "numeric value between 512 and 2048",
+          },
+        ],
+        returns: [
+          {
+            label: "Extracted GLB",
+            type: "",
+            python_type: {
+              type: "filepath",
+              description: "",
+            },
+            component: "Litmodel3d",
+            description: undefined,
+          },
+          {
+            label: "Download GLB",
+            type: "",
+            python_type: {
+              type: "filepath",
+              description: "",
+            },
+            component: "Downloadbutton",
+            description: undefined,
+          },
+        ],
+        type: {
+          generator: false,
+          cancel: false,
+        },
+      },
+      "/activate_button_1": {
+        parameters: [
+        ],
+        returns: [
+          {
+            label: "Download GLB",
+            type: "",
+            python_type: {
+              type: "filepath",
+              description: "",
+            },
+            component: "Downloadbutton",
+            description: undefined,
+          },
+        ],
+        type: {
+          generator: false,
+          cancel: false,
+        },
+      },
+      "/deactivate_button_1": {
+        parameters: [
+        ],
+        returns: [
+          {
+            label: "Download GLB",
+            type: "",
+            python_type: {
+              type: "filepath",
+              description: "",
+            },
+            component: "Downloadbutton",
+            description: undefined,
+          },
+        ],
+        type: {
+          generator: false,
+          cancel: false,
+        },
+      },
+    }
+  

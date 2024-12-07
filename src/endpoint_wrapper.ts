@@ -10,7 +10,7 @@ import { convertApiToSchema } from "./gradio_convert.js";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import * as fs from "fs/promises";
 import * as ps from "process";
-import {
+import type {
   CallToolResult,
   GetPromptResult,
   PromptArgument,
@@ -256,10 +256,13 @@ console.error(JSON.stringify(request.params,null,2));
 
     const parameters = request.params.arguments as Record<string, any>;
     for (const [key, value] of Object.entries(parameters)) {
-      if (key === "image" && typeof value === "string") {
-        parameters[key] = await handle_file(value);
+      if (key === "inputs" && typeof value === "string") {
+        parameters[key] =  handle_file(value);
       }
     }
+
+    console.error("****************");
+    console.error(JSON.stringify(parameters,null,2));
 
     const normalizedToken =
       typeof progressToken === "number"

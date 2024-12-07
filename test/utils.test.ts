@@ -1,8 +1,6 @@
 import { describe, it, expect } from "vitest";
-import type { ApiEndpoint } from "../src/ApiStructure";
-import { convertParameter } from "../src/utils";
-// Type for a single parameter from ApiEndpoint
-type ApiParameter = ApiEndpoint["parameters"][0];
+import type { ApiEndpoint } from "../src/gradio_api";
+import { convertParameter } from "../src/gradio_convert";
 
 function createParameter(
   override: Partial<ApiParameter> & {
@@ -388,6 +386,129 @@ describe("literal type conversions", () => {
       default: "False",
       examples: ["True"],
       enum: ["True", "False"]
+    });
+  });
+});
+
+describe("file and blob type conversions", () => {
+  it("handles simple filepath type", () => {
+    const param = createParameter({
+      type: "Blob | File | Buffer",
+      python_type: {
+        type: "filepath",
+        description: "",
+      },
+      example_input: {
+        path: "https://example.com/image.png",
+        meta: { _type: "gradio.FileData" },
+        orig_name: "image.png",
+        url: "https://example.com/image.png",
+      },
+    });
+    const result = convertParameter(param);
+
+    expect(result).toEqual({
+      type: "string",
+      description: "Accepts: URL, file path, or resource identifier",
+      examples: ["https://example.com/image.png"],
+    });
+  });
+
+  it("handles complex Dict type for image input", () => {
+    const param = createParameter({
+      type: "Blob | File | Buffer",
+      python_type: {
+        type: "Dict(path: str | None (Path to a local file), url: str | None (Publicly available url), ...)",
+        description: "For input, either path or url must be provided.",
+      },
+      example_input: {
+        path: "https://example.com/image.png",
+        meta: { _type: "gradio.FileData" },
+        orig_name: "image.png",
+        url: "https://example.com/image.png",
+      },
+    });
+    const result = convertParameter(param);
+
+    expect(result).toEqual({
+      type: "string",
+      description: "Accepts: URL, file path, or resource identifier",
+      examples: ["https://example.com/image.png"],
+    });
+  });
+
+  it("handles audio file input type", () => {
+    const param = createParameter({
+      type: "",
+      python_type: {
+        type: "filepath",
+        description: "",
+      },
+      component: "Audio",
+      example_input: {
+        path: "https://github.com/gradio-app/gradio/raw/main/test/test_files/audio_sample.wav",
+        meta: { _type: "gradio.FileData" },
+        orig_name: "audio_sample.wav",
+        url: "https://github.com/gradio-app/gradio/raw/main/test/test_files/audio_sample.wav",
+      },
+    });
+    const result = convertParameter(param);
+
+    expect(result).toEqual({
+      type: "string",
+      description: "Accepts: Audio file URL, file path, or resource identifier",
+      examples: ["https://github.com/gradio-app/gradio/raw/main/test/test_files/audio_sample.wav"],
+    });
+  });
+
+  it("handles empty type string for audio input", () => {
+    const param = createParameter({
+      label: "parameter_1",
+      parameter_name: "inputs",
+      parameter_has_default: false,
+      parameter_default: null,
+      python_type: {
+        type: "filepath",
+        description: "",
+      },
+      component: "Audio",
+      example_input: {
+        path: "https://github.com/gradio-app/gradio/raw/main/test/test_files/audio_sample.wav",
+        meta: { _type: "gradio.FileData" },
+        orig_name: "audio_sample.wav",
+        url: "https://github.com/gradio-app/gradio/raw/main/test/test_files/audio_sample.wav",
+      },
+    });
+    const result = convertParameter(param);
+
+    expect(result).toEqual({
+      type: "string",  // Should always be "string" for file inputs
+      description: "Accepts: Audio file URL, file path, or resource identifier",
+      examples: ["https://github.com/gradio-app/gradio/raw/main/test/test_files/audio_sample.wav"],
+    });
+  });
+
+  it("handles image file input type", () => {
+    const param = createParameter({
+      type: "",
+      python_type: {
+        type: "filepath",
+        description: "",
+      },
+      component: "Image",
+      example_input: {
+        path: "https://example.com/image.png",
+        meta: { _type: "gradio.FileData" },
+        orig_name: "image.png",
+        url: "https://example.com/image.png",
+      },
+    });
+    const result = convertParameter(param);
+
+    expect(result).toEqual({
+      type: "string",
+      description: "Accepts: Image file URL, file path, or resource identifier",
+      examples: ["https://example.com/image.png"],
     });
   });
 });
