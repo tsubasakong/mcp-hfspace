@@ -17,14 +17,16 @@
     "inspector": "npx @modelcontextprotocol/inspector build/index.js",
     "test": "vitest",
     "test:watch": "vitest watch",
-    "coverage": "vitest run --coverage"    
+    "coverage": "vitest run --coverage"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "0.6.0",
+    "minimist": "^1.2.8",
     "vitest": "^2.1.8"
   },
   "devDependencies": {
     "@gradio/client": "^1.8.0",
+    "@types/minimist": "^1.2.5",
     "@types/node": "^20.11.24",
     "typescript": "^5.3.3"
   }

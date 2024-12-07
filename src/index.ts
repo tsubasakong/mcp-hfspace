@@ -10,18 +10,19 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 
 import { EndpointWrapper } from "./endpoint_wrapper.js";
+import { parseConfig } from "./config.js";
 
-// Get the HuggingFace space paths from command line arguments
-let args = process.argv.slice(2);
-if (args.length < 1) {
-  args = ["black-forest-labs/FLUX.1-schnell"]; // batteries included
-}
+// Parse configuration
+const config = parseConfig();
+
+// Change to configured working directory
+process.chdir(config.workDir);
 
 // Create a map to store endpoints by their tool names
 const endpoints = new Map();
 
 // Initialize all endpoints
-for (const spacePath of args) {
+for (const spacePath of config.spacePaths) {
   try {
     const endpoint = await EndpointWrapper.createEndpoint(spacePath);
     endpoints.set(endpoint.toolDefinition().name, endpoint);
@@ -47,7 +48,7 @@ const server = new Server(
   },
   {
     capabilities: {
-      tools: { },
+      tools: {},
       prompts: {},
       resources: {},
     },
@@ -63,27 +64,27 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
 });
 
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
-
   const endpoint = endpoints.get(request.params.name);
 
   if (!endpoint) {
     throw new Error(`Unknown tool: ${request.params.name}`);
   }
-// //  try {
-     return await endpoint.call(request, server);
-//   } catch (error) {
-//     if (error instanceof Error) {
-//       return {
-//         content: [{
-//           type: "text",
-//           text: error.message
-//         }],
-//         isError: true
-//       };
-//     }
-//     throw error;
-//   }
-
+  try {
+    return await endpoint.call(request, server);
+  } catch (error) {
+    if (error instanceof Error) {
+      return {
+        content: [
+          {
+            type: `text`,
+            text: `mcp-hfspace error: ${error.message}`,
+          },
+        ],
+        isError: true,
+      };
+    }
+    throw error;
+  }
 });
 
 server.setRequestHandler(ListPromptsRequestSchema, async () => {
@@ -95,7 +96,6 @@ server.setRequestHandler(ListPromptsRequestSchema, async () => {
 });
 
 server.setRequestHandler(GetPromptRequestSchema, async (request) => {
-
   const promptName = request.params.name;
   const endpoint = Array.from(endpoints.values()).find(
     (ep) => ep.promptName() === promptName
