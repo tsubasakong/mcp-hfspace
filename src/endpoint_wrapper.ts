@@ -26,18 +26,40 @@ import { createProgressNotifier } from "./progress_notifier.js";
 import { GradioConverter } from "./content_converter.js";
 import { config } from "./config.js";
 
+export class SpaceInfo {
+  constructor(
+    public readonly fullPath: string,    // e.g. "parler-tts/parler_tts"
+    public readonly spaceName: string,   // e.g. "parler_tts"
+    public readonly owner: string        // e.g. "parler-tts"
+  ) {}
+
+  getToolName(endpointName: string, anonIndex: number): string {
+    const name = `${this.spaceName}-${
+      anonIndex < 0 ? endpointName.slice(1) : endpointName
+    }`
+      .replace(/[^a-zA-Z0-9_-]/g, "_")
+      .slice(0, 64);
+    return name || "unnamed_tool";
+  }
+
+  static fromPath(spacePath: string): SpaceInfo {
+    const [owner, name] = spacePath.split("/");
+    return new SpaceInfo(spacePath, name, owner);
+  }
+}
 
 export class EndpointWrapper {
   private anonIndex: number;
+  private spaceInfo: SpaceInfo;
 
   constructor(
     private endpointName: string,
     private endpoint: ApiEndpoint,
-    private spaceName: string,
+    spacePath: string,
     private client: Client,
     anonIndex = -1
   ) {
-    this.spaceName = spaceName;
+    this.spaceInfo = SpaceInfo.fromPath(spacePath);
     this.anonIndex = anonIndex;
   }
 
@@ -126,19 +148,18 @@ export class EndpointWrapper {
 
   /* Endpoint Wrapper */
 
+  private getSpaceDisplayName(): string {
+    return `${this.spaceInfo.fullPath} endpoint ${this.endpointName}`;
+  }
+
   get toolName() {
-    const name = `${this.spaceName.split("/")[1]}-${
-      this.anonIndex < 0 ? this.endpointName.slice(1) : this.endpointName
-    }`
-      .replace(/[^a-zA-Z0-9_-]/g, "_") // Replace invalid chars with underscore
-      .slice(0, 64); // Limit length to 64 chars
-    return name || "unnamed_tool"; // Fallback if empty
+    return this.spaceInfo.getToolName(this.endpointName, this.anonIndex);
   }
 
   toolDefinition() {
     return {
       name: this.toolName,
-      description: `Call the ${this.spaceName} endpoint ${this.endpointName}`,
+      description: `Call the ${this.getSpaceDisplayName()}`,
       inputSchema: convertApiToSchema(this.endpoint),
     };
   }
@@ -199,7 +220,7 @@ export class EndpointWrapper {
         throw new Error("No data received from endpoint");
       }
 
-      return await this.convertPredictResults(this.endpoint.returns, result);
+      return await this.convertPredictResults(this.endpoint.returns, result, this.spaceInfo);
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : String(error);
@@ -209,13 +230,14 @@ export class EndpointWrapper {
 
   private async convertPredictResults(
     returns: ApiReturn[],
-    predictResults: any[]
+    predictResults: any[],
+    spaceInfo: SpaceInfo
   ): Promise<CallToolResult> {
     const content: (TextContent | ImageContent | EmbeddedResource)[] = [];
 
     for (const [index, output] of returns.entries()) {
       const value = predictResults[index];
-      const converted = await GradioConverter.convert(output, value);
+      const converted = await GradioConverter.convert(output, value, spaceInfo);
       content.push(converted);
     }
 
@@ -223,6 +245,10 @@ export class EndpointWrapper {
       content,
       isError: false,
     };
+  }
+
+  getSpaceInfo(): SpaceInfo {
+    return this.spaceInfo;
   }
 
   promptName() {
@@ -234,7 +260,7 @@ export class EndpointWrapper {
     const schema = convertApiToSchema(this.endpoint);
     return {
       name: this.promptName(),
-      description: `Use the ${this.spaceName} endpoint ${this.endpointName}.`,
+      description: `Use the ${this.getSpaceDisplayName()}.`,
       arguments: Object.entries(schema.properties).map(([name, prop]: [string, any]) => ({
         name,
         description: prop.description || name,
@@ -247,7 +273,7 @@ export class EndpointWrapper {
     args?: Record<string, string>
   ): Promise<GetPromptResult> {
     const schema = convertApiToSchema(this.endpoint);
-    let promptText = `Using the ${this.spaceName} ${this.endpointName} endpoint:\n\n`;
+    let promptText = `Using the ${this.getSpaceDisplayName()}:\n\n`;
 
     promptText += Object.entries(schema.properties)
       .map(([name, prop]: [string, any]) => {
