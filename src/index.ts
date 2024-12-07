@@ -97,9 +97,8 @@ server.setRequestHandler(ListPromptsRequestSchema, async () => {
 
 server.setRequestHandler(GetPromptRequestSchema, async (request) => {
   const promptName = request.params.name;
-  const endpoint = Array.from(endpoints.values()).find(
-    (ep) => ep.promptName() === promptName
-  );
+  // Find endpoint with exactly matching prompt name
+  const endpoint = endpoints.get(promptName);
 
   if (!endpoint) {
     throw new Error(`Unknown prompt: ${promptName}`);

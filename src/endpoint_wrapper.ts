@@ -226,85 +226,48 @@ export class EndpointWrapper {
   }
 
   promptName() {
-    // Keep consistent with toolName pattern
+    // Use the same name as the tool for consistency
     return this.toolName;
   }
 
   promptDefinition() {
+    const schema = convertApiToSchema(this.endpoint);
     return {
-      name: `${this.promptName()} -- My working dir is ${ps.cwd()}`,
+      name: this.promptName(),
       description: `Use the ${this.spaceName} endpoint ${this.endpointName}.`,
-      arguments: this.convertToPromptArguments(this.endpoint.parameters),
+      arguments: Object.entries(schema.properties).map(([name, prop]: [string, any]) => ({
+        name,
+        description: prop.description || name,
+        required: schema.required?.includes(name) || false,
+      })),
     };
-  }
-
-  private convertToPromptArguments(
-    parameters: ApiParameter[]
-  ): PromptArgument[] {
-    return parameters.map((param) => ({
-      name: param.label || param.component,
-      description: this.getParameterDescription(param),
-      required: true, // Could be enhanced with actual required status if available from Gradio
-    }));
-  }
-
-  private getParameterDescription(param: ApiParameter): string {
-    const type = param.python_type?.description || param.component;
-    const baseDesc = `${type} input`;
-
-    // Add component-specific details
-    switch (param.component) {
-      case "Image":
-        return `${baseDesc} - Provide an image description or URL`;
-      case "Audio":
-        return `${baseDesc} - Provide audio file URL or description`;
-      case "Slider":
-        return `${baseDesc} - Provide a numeric value`;
-      default:
-        return baseDesc;
-    }
   }
 
   async getPromptTemplate(
     args?: Record<string, string>
   ): Promise<GetPromptResult> {
-    const messages: PromptMessage[] = [
-      {
-        role: "user",
-        content: {
-          type: "text",
-          text: this.generatePromptText(args),
-        },
-      },
-    ];
+    const schema = convertApiToSchema(this.endpoint);
+    let promptText = `Using the ${this.spaceName} ${this.endpointName} endpoint:\n\n`;
+
+    promptText += Object.entries(schema.properties)
+      .map(([name, prop]: [string, any]) => {
+        let defaultHint = prop.default !== undefined ? ` - default: ${prop.default}` : '';
+        const value = args?.[name] || `[Provide ${prop.description || name}${defaultHint}]`;
+        return `${name}: ${value}`;
+      })
+      .join('\n');
 
     return {
       description: this.promptDefinition().description,
-      messages,
+      messages: [
+        {
+          role: "user",
+          content: {
+            type: "text",
+            text: promptText,
+          },
+        },
+      ],
     };
-  }
-
-  private generatePromptText(args?: Record<string, string>): string {
-    const params = this.endpoint.parameters;
-    let text = `Using the ${this.spaceName} ${this.endpointName} endpoint:\n\n`;
-
-    if (args) {
-      // Include provided arguments
-      text += params
-        .map((param) => {
-          const value = args[param.label] || "[not provided]";
-          return `${param.label}: ${value}`;
-        })
-        .join("\n");
-    } else {
-      // Show parameter template
-      text += params
-        .map((param) => {
-          return `${param.label}: [Provide ${param.component} input]`;
-        })
-        .join("\n");
-    }
-
-    return text;
   }
 }

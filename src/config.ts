@@ -26,8 +26,11 @@ export function parseConfig(): Config {
     claudeDesktopMode: argv['desktop-mode'],
     workDir: path.resolve(argv['work-dir']),
     hfToken: argv['hf-token'],
-    spacePaths: argv._.length > 0 
-      ? argv._
-      : ["black-forest-labs/FLUX.1-schnell"]
+    spacePaths: (() => {
+      const filtered = argv._.filter(arg => arg.toString().trim().length > 0);
+      return filtered.length > 0 
+        ? filtered
+        : ["black-forest-labs/FLUX.1-schnell"];
+    })()
   };
 }
