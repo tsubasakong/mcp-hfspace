@@ -1,14 +1,21 @@
 import { Client } from "@gradio/client";
-import { ApiStructure, ApiEndpoint, ApiParameter, ApiReturn } from "./gradio_api.js";
+import { handle_file } from "@gradio/client";
+import {
+  ApiStructure,
+  ApiEndpoint,
+  ApiParameter,
+  ApiReturn,
+} from "./gradio_api.js";
 import { convertApiToSchema } from "./gradio_convert.js";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import * as fs from "fs/promises";
 import * as ps from "process";
-import type {
+import {
   CallToolResult,
   GetPromptResult,
   PromptArgument,
   PromptMessage,
+  CallToolRequest,
 } from "@modelcontextprotocol/sdk/types.d.ts";
 import type {
   TextContent,
@@ -50,10 +57,7 @@ class GradioConverter {
 }
 
 // Shared text content creator
-const createTextContent = (
-  component: ApiReturn,
-  value: any
-): TextContent => {
+const createTextContent = (component: ApiReturn, value: any): TextContent => {
   const label = component.label ? `${component.label}: ` : "";
   const text = typeof value === "string" ? value : JSON.stringify(value);
   return {
@@ -80,7 +84,7 @@ const convertUrlToBase64 = async (url: string, defaultMimeType: string) => {
 };
 
 const imageConverter: ConverterFn = async (component, value) => {
-  console.error(JSON.stringify(value,null,2));
+  console.error(JSON.stringify(value, null, 2));
   if (!value?.url) return null;
   const { mimeType, base64Data } = await convertUrlToBase64(
     value.url,
@@ -94,7 +98,7 @@ const imageConverter: ConverterFn = async (component, value) => {
 };
 
 const audioConverter: ConverterFn = async (component, value) => {
-  console.error(JSON.stringify(value,null,2));
+  console.error(JSON.stringify(value, null, 2));
   if (!value?.url) return null;
   const { mimeType, base64Data, arrayBuffer } = await convertUrlToBase64(
     value.url,
@@ -239,6 +243,30 @@ export class EndpointWrapper {
       description: `Call the ${this.spaceName} endpoint ${this.endpointName}`,
       inputSchema: convertApiToSchema(this.endpoint),
     };
+  }
+
+  async call(request: CallToolRequest, server: Server): Promise<CallToolResult> {
+    const progressToken = request.params._meta?.progressToken as
+      | string
+      | number
+      | undefined;
+
+
+console.error(JSON.stringify(request.params,null,2));
+
+    const parameters = request.params.arguments as Record<string, any>;
+    for (const [key, value] of Object.entries(parameters)) {
+      if (key === "image" && typeof value === "string") {
+        parameters[key] = await handle_file(value);
+      }
+    }
+
+    const normalizedToken =
+      typeof progressToken === "number"
+        ? progressToken.toString()
+        : progressToken;
+
+    return this.handleToolCall(parameters, normalizedToken, server);
   }
 
   async handleToolCall(

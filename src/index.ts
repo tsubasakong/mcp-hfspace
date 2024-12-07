@@ -15,15 +15,10 @@ import { EndpointWrapper } from "./endpoint_wrapper.js";
 let args = process.argv.slice(2);
 if (args.length < 1) {
   args = ["black-forest-labs/FLUX.1-schnell"]; // batteries included
-/*  console.error(
-    "Error: At least one HuggingFace space path is required (format: vendor/space or vendor/space/endpoint)"
-  );
-  process.exit(1);*/
 }
 
 // Create a map to store endpoints by their tool names
 const endpoints = new Map();
-
 
 // Initialize all endpoints
 for (const spacePath of args) {
@@ -68,24 +63,27 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
 });
 
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
-  const toolName = request.params.name;
-  const endpoint = endpoints.get(toolName);
+
+  const endpoint = endpoints.get(request.params.name);
 
   if (!endpoint) {
-    throw new Error(`Unknown tool: ${toolName}`);
+    throw new Error(`Unknown tool: ${request.params.name}`);
+  }
+  try {
+    return await endpoint.call(request, server);
+  } catch (error) {
+    if (error instanceof Error) {
+      return {
+        content: [{
+          type: "text",
+          text: error.message
+        }],
+        isError: true
+      };
+    }
+    throw error;
   }
 
-  const progressToken = request.params._meta?.progressToken as
-    | string
-    | number
-    | undefined;
-  const parameters = request.params.arguments as Record<string, any>;
-  const normalizedToken =
-    typeof progressToken === "number"
-      ? progressToken.toString()
-      : progressToken;
-
-  return await endpoint.handleToolCall(parameters, normalizedToken, server);
 });
 
 server.setRequestHandler(ListPromptsRequestSchema, async () => {
