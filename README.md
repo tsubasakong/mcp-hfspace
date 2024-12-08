@@ -124,12 +124,16 @@ On Windows: `%APPDATA%/Claude/claude_desktop_config.json`
 {
   "mcpServers": {
     "mcp-hfspace": {
-      "command": "/path/to/mcp-hfspace/build/index.js"
+      "command": "npx"
       "args:" [
-        "Qwen/Qwen2-72B-Instruct",
-        "black-forest-labs/FLUX.1-schnell",
+        "-y",
+        "@llmindset/mcp-hfspace",
         "--work-dir=~/mcp-files/ or x:/temp/mcp-files/",
         "--HF_TOKEN=HF_{optional token}"
+        "Qwen/Qwen2-72B-Instruct",
+        "black-forest-labs/FLUX.1-schnell",
+        "foo/bar/baz"
+        ...
         ]
     }
   }
