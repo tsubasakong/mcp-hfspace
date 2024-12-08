@@ -1,29 +1,28 @@
 # mcp-hfspace MCP Server 🤗
 
-Connect to [HuggingFace Spaces](https://huggingface.co/)  with minimal configuration needed simply add your spaces and go!.
+Connect to [HuggingFace Spaces](https://huggingface.co/)  with minimal configuration needed - simply add your spaces and go!.
 
-If no spaces are specified, connects to `evalstate/FLUX.1-schnell` image generator by default.
-
-@llmindset/mcp-hfspace.
-
-
+If no spaces are specified, it automatically connects to `evalstate/FLUX.1-schnell` providing Image Generation capabilities.
 
 ## Basic setup
 
-Supply a list of HuggingFace spaces in the arguments. mcp-hfspace will usually be able to find the most appropriate endpoint and automatically configure for usage.
+Supply a list of HuggingFace spaces in the arguments. mcp-hfspace will find the most appropriate endpoint and automatically configure for usage. An example `claude_desktop_config.json` is supplied [below.](#installation)
 
-For example: `.../build/index.js Qwen/Qwen2.5-72B-Instruct evalstate/`
 
-It is strongly recommended to set a Working Directory for handling upload and download of images and other file-based content. Do that with the `--work-dir` argument or `MCP_HF_WORK_DIR` environment variable. The current working directory is used by default which for Claude on Windows is `TODO` and on MacOS is `TODO`.
+It is recommended to set a Working Directory for handling upload and download of images and other file-based content. Specify either the `--work-dir=/your_directory` argument or `MCP_HF_WORK_DIR` environment variable. 
 
-To access private spaces, use `--hf-token` argument or `HF_TOKEN` environment variable to set your HuggingFace token.
+By default the current working directory is used by default which for Claude on Windows is `\users\<username>\AppData\Roaming\Claude\<version.number\` and on MacOS is `TODO`.
+
+To use private spaces, supply your Hugging Face Token with either the  `--hf-token=hf_...` argument or `HF_TOKEN` environment variable.
 
 ## File Handling and Claude Desktop Mode
 
+By default, the server starts in "Claude Desktop" mode. This is intended to make best use of that Clients capabilities. 
+
 ### Example 1 - Image Generation (Download Image / Claude Vision)
 
-We'll use `shuttle/
-By default, files are . Available files in the root of the . 
+We'll use `shuttleai/shuttle-3.1-aesthetic` to generate an image. The image gets saved to the Work Directory, as well as included in Claude's context window - enabling Claude's vision capabilities. 
+
 
 ### Example 2 - Image Recognition
 
@@ -153,10 +152,14 @@ The Inspector will provide a URL to access debugging tools in your browser.
 
 **mcp-hfspace**
 
-- Content download only works from spaces with Public visibility.
 - Endpoints with unnamed parameters are unsupported for the moment.
 
 **Claude Desktop**
 
 - Claude Desktop 0.75 doesn't seem to respond to errors from the MCP Server, timing out instead. For persistent issues, use the MCP Inspector to get a better look at diagnosing what's going wrong. If something suddenly stops working, it's probably a quota issue.
 - Claude Desktop seems to use a hard timeout value of 60s, and doesn't seem to use Progress Notifications to manage UX alive. If you are using ZeroGPU spaces, large/heavy jobs may timeout. Check the WORK_DIR for results though; the MCP Server will still capture the result.
+- Claude Desktops reporting of Server Status, logging etc. isn't great - use [@modelcontextprotocol/inspector](https://github.com/modelcontextprotocol/inspector) to help diagnose issues.
+
+** HuggingFace Spaces**
+
+- If ZeroGPU quotas become an issue, try duplicating the space, make it private, use dedicated hardware and use HF_TOKEN to access. 
