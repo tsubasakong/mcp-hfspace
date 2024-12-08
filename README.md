@@ -37,9 +37,11 @@ Some recommended spaces to try:
 - suno/bark
 
 **Speech-to-text**
+
 - hf-audio/whisper-large-v3-turbo
 
 **Text-to-music**
+
 haoheliu/audioldm2-text2audio-text2music
 
 **Vision Tasks**
