@@ -46,16 +46,18 @@ In _Claude Desktop Mode_, the audio file is saved in the WORK_DIR, and Claude is
 
 ### Example 5 - Image-to-Image
 
+In this example, we specify the filename for the Tool, and get returned an Image and 2 separate text objects. 
+`use omniparser to analyse ./screenshot.png` and `use the analysis to produce an artifact that reproduces that screen`. 
 
+In this instance, Omniparser was prompted with a filename, and returned an image and set of coordinates and annotations for the screenshot.
+
+![Omniparser and Artifcat](./2024-12-08-mcp-omni-artifact.png)
+`microsoft/OmniParser`
 
 
 ### Specifying API Endpoint
 
 If you need, you can specify a specific API Endpoint by adding it to the spacename. So rather than passing in `Qwen/Qwen2.5-72B-Instruct` you would use `Qwen/Qwen2.5-72B-Instruct/model_chat`.
-
-### Specifying HuggingFace Token
-
-`HF_TOKEN` environment variable to set your Hugging Face token.
 
 ## Recommended Spaces
 

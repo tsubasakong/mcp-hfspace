@@ -10,17 +10,39 @@ import path from "path";
 import { config } from "./config.js";
 import { SpaceInfo } from "./endpoint_wrapper.js";
 
+// Add types for Gradio component values
+interface GradioResourceValue {
+  url?: string;
+  mime_type?: string;
+  orig_name?: string;
+}
+
+// Component types enum
+enum GradioComponentType {
+  Image = "Image",
+  Audio = "Audio",
+  Chatbot = "Chatbot"
+}
+
+// Resource response interface
+interface ResourceResponse {
+  mimeType: string;
+  base64Data: string;
+  arrayBuffer: ArrayBuffer;
+  originalExtension: string | null;
+}
+
 // Simple converter registry
 type ContentConverter = (
   component: ApiReturn,
-  value: any,
+  value: GradioResourceValue,
   spaceInfo: SpaceInfo
 ) => Promise<TextContent | ImageContent | EmbeddedResource>;
 
 // Type for converter functions that may not succeed
 type ConverterFn = (
   component: ApiReturn,
-  value: any,
+  value: GradioResourceValue,
   spaceInfo: SpaceInfo
 ) => Promise<TextContent | ImageContent | EmbeddedResource | null>;
 // Default converter implementation
@@ -35,7 +57,7 @@ export class GradioConverter {
 
   static async convert(
     component: ApiReturn,
-    value: any,
+    value: GradioResourceValue,
     spaceInfo: SpaceInfo
   ): Promise<TextContent | ImageContent | EmbeddedResource> {
     if (config.debug) {
@@ -60,15 +82,11 @@ const createTextContent = (component: ApiReturn, value: any): TextContent => {
 
 // Wrapper that adds fallback behavior
 const withFallback = (converter: ConverterFn): ContentConverter => {
-  return async (component: ApiReturn, value: any, spaceInfo: SpaceInfo) => {
+  return async (component: ApiReturn, value: GradioResourceValue, spaceInfo: SpaceInfo) => {
     const result = await converter(component, value, spaceInfo);
     return result ?? createTextContent(component, value);
   };
 };
-
-// Add these helper functions before convertUrlToBase64
-const isImageMimeType = (mimeType: string) => mimeType.startsWith("image/");
-const isAudioMimeType = (mimeType: string) => mimeType.startsWith("audio/");
 
 // Update generateFilename to use space name
 const generateFilename = (
@@ -132,7 +150,7 @@ const determineMimeType = (value: any, responseHeaders: Headers): string => {
   return 'text/plain';
 };
 
-const convertUrlToBase64 = async (url: string, value: any) => {
+const convertUrlToBase64 = async (url: string, value: GradioResourceValue): Promise<ResourceResponse> => {
   const headers: HeadersInit = {};
   if (config.hfToken) {
     headers.Authorization = `Bearer ${config.hfToken}`;
@@ -175,22 +193,23 @@ const saveFile = async (
 const imageConverter: ConverterFn = async (_component, value, spaceInfo) => {
   if (!value?.url) return null;
   try {
-    const { mimeType, base64Data, arrayBuffer, originalExtension } = await convertUrlToBase64(
-      value.url,
-      value
+    const response = await convertUrlToBase64(value.url, value);
+    await saveFile(
+      response.arrayBuffer, 
+      response.mimeType, 
+      GradioComponentType.Image,
+      spaceInfo.spaceName, 
+      response.originalExtension
     );
-    await saveFile(arrayBuffer, mimeType, "image", spaceInfo.spaceName, originalExtension);
+    
     return {
       type: "image",
-      data: base64Data,
-      mimeType,
+      data: response.base64Data,
+      mimeType: response.mimeType,
     };
   } catch (error) {
     console.error("Image conversion failed:", error);
-    return {
-      type: "text",
-      text: `Failed to load image: ${(error as Error).message}`,
-    };
+    return createTextContent(_component, `Failed to load image: ${error instanceof Error ? error.message : String(error)}`);
   }
 };
 
@@ -238,9 +257,9 @@ const audioConverter: ConverterFn = async (_component, value, spaceInfo) => {
 };
 
 // Register converters with fallback behavior
-GradioConverter.register("Image", withFallback(imageConverter));
-GradioConverter.register("Audio", withFallback(audioConverter));
+GradioConverter.register(GradioComponentType.Image, withFallback(imageConverter));
+GradioConverter.register(GradioComponentType.Audio, withFallback(audioConverter));
 GradioConverter.register(
-  "Chatbot",
+  GradioComponentType.Chatbot,
   withFallback(async () => null)
 );
