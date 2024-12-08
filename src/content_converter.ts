@@ -38,6 +38,9 @@ export class GradioConverter {
     value: any,
     spaceInfo: SpaceInfo
   ): Promise<TextContent | ImageContent | EmbeddedResource> {
+    if (true) {
+      await fs.writeFile(generateFilename("debug","json",spaceInfo.spaceName), JSON.stringify(value,null,2));
+    }
     const converter =
       this.converters.get(component.component) ||
       withFallback(defaultConverter);
@@ -64,36 +67,51 @@ const withFallback = (converter: ConverterFn): ContentConverter => {
 };
 
 // Add these helper functions before convertUrlToBase64
-const isImageMimeType = (mimeType: string) => mimeType.startsWith('image/');
-const isAudioMimeType = (mimeType: string) => mimeType.startsWith('audio/');
+const isImageMimeType = (mimeType: string) => mimeType.startsWith("image/");
+const isAudioMimeType = (mimeType: string) => mimeType.startsWith("audio/");
 
 // Update generateFilename to use space name
-const generateFilename = (prefix: string, extension: string, spaceName: string): string => {
-  const date = new Date().toISOString().split('T')[0];  // YYYY-MM-DD
-  const randomId = crypto.randomUUID().slice(0, 5);     // First 5 chars
+const generateFilename = (
+  prefix: string,
+  extension: string,
+  spaceName: string
+): string => {
+  const date = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
+  const randomId = crypto.randomUUID().slice(0, 5); // First 5 chars
   const safeSpaceName = spaceName.replace(/[^a-zA-Z0-9_-]/g, "_");
   return `${date}_${safeSpaceName}_${prefix}_${randomId}.${extension}`;
+};
+
+const getExtensionFromFilename = (url: string): string | null => {
+  const match = url.match(/\/([^/?#]+)[^/]*$/);
+  if (match && match[1].includes('.')) {
+    return match[1].split('.').pop() || null;
+  }
+  return null;
 };
 
 const convertUrlToBase64 = async (url: string, expectedMimeType: string) => {
   const response = await fetch(url);
   if (!response.ok) {
-    throw new Error(`Failed to fetch resource: ${response.status} ${response.statusText}`);
+    throw new Error(
+      `Failed to fetch resource: ${response.status} ${response.statusText}`
+    );
   }
-  
+
   const mimeType = response.headers.get("content-type") || expectedMimeType;
-  
+  const originalExtension = getExtensionFromFilename(url);
+
   // Validate MIME type based on expected type
-  if (expectedMimeType.startsWith('image/') && !isImageMimeType(mimeType)) {
+  if (expectedMimeType.startsWith("image/") && !isImageMimeType(mimeType)) {
     throw new Error(`Expected image type but got: ${mimeType}`);
   }
-  if (expectedMimeType.startsWith('audio/') && !isAudioMimeType(mimeType)) {
+  if (expectedMimeType.startsWith("audio/") && !isAudioMimeType(mimeType)) {
     throw new Error(`Expected audio type but got: ${mimeType}`);
   }
 
   const arrayBuffer = await response.arrayBuffer();
   const base64Data = Buffer.from(arrayBuffer).toString("base64");
-  return { mimeType, base64Data, arrayBuffer };
+  return { mimeType, base64Data, arrayBuffer, originalExtension };
 };
 
 // Update saveFile to include space name
@@ -101,9 +119,10 @@ const saveFile = async (
   arrayBuffer: ArrayBuffer,
   mimeType: string,
   prefix: string,
-  spaceName: string
+  spaceName: string,
+  originalExtension?: string | null
 ): Promise<string> => {
-  const extension = mimeType.split("/")[1] || "bin";
+  const extension = originalExtension || mimeType.split("/")[1] || "bin";
   const filename = generateFilename(prefix, extension, spaceName);
   await fs.writeFile(filename, Buffer.from(arrayBuffer), {
     encoding: "binary",
@@ -116,18 +135,18 @@ const saveFile = async (
 const imageConverter: ConverterFn = async (_component, value, spaceInfo) => {
   if (!value?.url) return null;
   try {
-    const { mimeType, base64Data, arrayBuffer } = await convertUrlToBase64(
+    const { mimeType, base64Data, arrayBuffer, originalExtension } = await convertUrlToBase64(
       value.url,
       "image/png"
     );
-    await saveFile(arrayBuffer, mimeType, "image", spaceInfo.spaceName);
+    await saveFile(arrayBuffer, mimeType, "image", spaceInfo.spaceName, originalExtension);
     return {
       type: "image",
       data: base64Data,
       mimeType,
     };
   } catch (error) {
-    console.error('Image conversion failed:', error);
+    console.error("Image conversion failed:", error);
     return {
       type: "text",
       text: `Failed to load image: ${(error as Error).message}`,
@@ -138,17 +157,25 @@ const imageConverter: ConverterFn = async (_component, value, spaceInfo) => {
 const audioConverter: ConverterFn = async (_component, value, spaceInfo) => {
   if (!value?.url) return null;
   try {
-    const { mimeType, base64Data, arrayBuffer } = await convertUrlToBase64(
+    const { mimeType, base64Data, arrayBuffer, originalExtension } = await convertUrlToBase64(
       value.url,
       "audio/wav"
     );
-    const filename = await saveFile(arrayBuffer, mimeType, "audio", spaceInfo.spaceName);
+    const filename = await saveFile(
+      arrayBuffer,
+      mimeType,
+      "audio",
+      spaceInfo.spaceName,
+      originalExtension
+    );
+
+    console.error(`claude dekstop? ${config.claudeDesktopMode}`)
     if (config.claudeDesktopMode) {
       return {
         type: "resource",
         resource: {
           uri: `${pathToFileURL(path.resolve(filename)).href}`,
-          mimeType,
+          mimetype: `text/plain`,
           text: `Your audio was succesfully created and is available for playback. Claude does not currently support audio content`,
         },
       };
@@ -163,7 +190,7 @@ const audioConverter: ConverterFn = async (_component, value, spaceInfo) => {
       };
     }
   } catch (error) {
-    console.error('Audio conversion failed:', error);
+    console.error("Audio conversion failed:", error);
     return {
       type: "text",
       text: `Failed to load audio: ${(error as Error).message}`,

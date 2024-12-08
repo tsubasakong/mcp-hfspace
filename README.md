@@ -46,6 +46,17 @@ haoheliu/audioldm2-text2audio-text2music
 
 - merve/paligemma2-vqav2
 
+## Features
+
+### Claude Desktop Mode
+
+By default, the Server operates in _Claude Desktop Mode_. In this mode, Images are returned directly in the tool responses, while other binaries are saved in the working folder and a message is returned with the URI. 
+
+Text Content is returned as a Text content type.
+
+For other Client deployments, you will probably want the default behaviour so use --desktop-mode=false or CLAUDE_DESKTOP_MODE=false.
+
+
 ## Development
 
 Install dependencies:
@@ -96,3 +107,11 @@ npm run inspector
 ```
 
 The Inspector will provide a URL to access debugging tools in your browser.
+
+### Known Issues and Limitations
+
+**mcp-hfspace**
+
+- Content download only works from spaces with Public visibility.
+
+**Claude Desktop**
