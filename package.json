@@ -13,7 +13,8 @@
     "build"
   ],
   "scripts": {
-    "build": "tsc && node -e \"require('fs').chmodSync('build/index.js', '755')\"",
+    "prebuild": "node scripts/generate-version.js",
+    "build": "tsc",
     "prepare": "npm run build",
     "watch": "tsc --watch",
     "inspector": "npx @modelcontextprotocol/inspector build/index.js",
@@ -22,11 +23,11 @@
     "coverage": "vitest run --coverage"
   },
   "dependencies": {
+    "@gradio/client": "^1.8.0",
     "@modelcontextprotocol/sdk": "0.6.0",
     "minimist": "^1.2.8"
   },
   "devDependencies": {
-    "@gradio/client": "^1.8.0",
     "@types/minimist": "^1.2.5",
     "@types/node": "^20.11.24",
     "typescript": "^5.3.3",

@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
+import { VERSION } from "./version.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import {
   CallToolRequestSchema,
@@ -9,12 +10,28 @@ import {
   GetPromptRequestSchema,
   ListResourcesRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
-import { promises as fs } from 'fs';
-import { join } from 'path';
+import { promises as fs } from "fs";
+import { join } from "path";
 
 import { EndpointWrapper } from "./endpoint_wrapper.js";
 import { parseConfig } from "./config.js";
 
+// Create MCP server
+const server = new Server(
+  {
+    name: "mcp-hfspace",
+    version: VERSION,
+  },
+  {
+    capabilities: {
+      tools: {},
+      prompts: {},
+      resources: {
+        list: true,
+      },
+    },
+  }
+);
 // Parse configuration
 const config = parseConfig();
 
@@ -41,23 +58,6 @@ for (const spacePath of config.spacePaths) {
 if (endpoints.size === 0) {
   throw new Error("No valid endpoints found in any of the provided spaces");
 }
-
-// Create MCP server
-const server = new Server(
-  {
-    name: "mcp-hfspace",
-    version: "0.3.3",
-  },
-  {
-    capabilities: {
-      tools: {},
-      prompts: {},
-      resources: {
-        list: true,
-      },
-    },
-  }
-);
 
 server.setRequestHandler(ListToolsRequestSchema, async () => {
   return {
@@ -113,10 +113,10 @@ server.setRequestHandler(GetPromptRequestSchema, async (request) => {
 server.setRequestHandler(ListResourcesRequestSchema, async () => {
   try {
     const files = await fs.readdir(config.workDir);
-    const resources = files.map(file => ({
+    const resources = files.map((file) => ({
       uri: `file://${join(config.workDir, file)}`,
       name: file,
-      type: 'file'
+      type: "file",
     }));
     return { resources };
   } catch (error) {
