@@ -91,15 +91,19 @@ export function convertParameter(param: ApiParameter): ParameterSchema {
   return baseSchema;
 }
 
+
 export function convertApiToSchema(endpoint: ApiEndpoint) {
   const properties: { [key: string]: any } = {};
   const required: string[] = [];
   let propertyCounter = 1;
+  const unnamedParameters: Record<string, number> = {};
 
-  endpoint.parameters.forEach((param: any) => {
+  endpoint.parameters.forEach((param: ApiParameter, index: number) => {
     // Get property name from parameter_name, label, or generate one
-    const propertyName = param.parameter_name || param.label || `Property ${propertyCounter++}`;
-    
+    const propertyName = param.parameter_name || param.label || `Unnamed Parameter ${propertyCounter++}`;
+    if (!param.parameter_name) {
+      unnamedParameters[propertyName] = index;
+    }
     // Convert parameter using existing function
     properties[propertyName] = convertParameter(param);
 

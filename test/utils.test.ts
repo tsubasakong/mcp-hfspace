@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import type { ApiEndpoint } from "../src/gradio_api";
+import type { ApiEndpoint, ApiParameter } from "../src/gradio_api";
 import { convertParameter } from "../src/gradio_convert";
 
 function createParameter(
@@ -13,9 +13,7 @@ function createParameter(
 ): ApiParameter {
   return {
     label: "Test Parameter",
-    parameter_name: "test_param",
-    parameter_has_default: false,
-    parameter_default: null,
+    // parameter_name is now optional
     type: "string",
     component: "Textbox",
     // Spread the override at the end to allow overriding defaults
@@ -509,6 +507,58 @@ describe("file and blob type conversions", () => {
       type: "string",
       description: "Accepts: Image file URL, file path, or resource identifier",
       examples: ["https://example.com/image.png"],
+    });
+  });
+});
+
+describe("unnamed parameters", () => {
+  it("handles parameters without explicit names", () => {
+    const param = createParameter({
+      label: "Input Text",
+      type: "string",
+      python_type: {
+        type: "str",
+        description: "A text input",
+      },
+      component: "Textbox",
+    });
+    
+    const result = convertParameter(param);
+
+    expect(result).toEqual({
+      type: "string",
+      description: "A text input",
+    });
+  });
+
+  it("handles array of unnamed parameters", () => {
+    const params = [
+      createParameter({
+        label: "Image Input",
+        type: "Blob | File | Buffer",
+        python_type: {
+          type: "filepath",
+          description: "",
+        },
+        component: "Image",
+        example_input: "https://example.com/image.png",
+      }),
+      createParameter({
+        label: "Text Input",
+        type: "string", 
+        python_type: {
+          type: "str",
+          description: "",
+        },
+        component: "Textbox",
+        example_input: "Hello!",
+      }),
+    ];
+
+    // Test each parameter conversion
+    params.forEach((param, index) => {
+      const result = convertParameter(param);
+      expect(result).toBeTruthy();
     });
   });
 });

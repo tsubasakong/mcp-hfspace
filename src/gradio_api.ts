@@ -1,13 +1,13 @@
 // Just the types we need for the API structure - copied from Gradio client library
 export interface ApiParameter {
   label: string;
-  parameter_name: string;
-  parameter_has_default: boolean;
-  parameter_default: any;
+  parameter_name?: string; // Now optional
+  parameter_has_default?: boolean;
+  parameter_default?: any;
   type: string;
-  python_type?: {
+  python_type: {
     type: string;
-    description: string;
+    description?: string;
   };
   component: string;
   example_input?: any;

@@ -1,20 +1,12 @@
 import { Client } from "@gradio/client";
 import { handle_file } from "@gradio/client";
-import {
-  ApiStructure,
-  ApiEndpoint,
-  ApiParameter,
-  ApiReturn,
-} from "./gradio_api.js";
+import { ApiStructure, ApiEndpoint, ApiReturn } from "./gradio_api.js";
 import { convertApiToSchema, isFileParameter } from "./gradio_convert.js";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import * as fs from "fs/promises";
-import * as ps from "process";
 import type {
   CallToolResult,
   GetPromptResult,
-  PromptArgument,
-  PromptMessage,
   CallToolRequest,
 } from "@modelcontextprotocol/sdk/types.d.ts";
 import type {
@@ -27,23 +19,32 @@ import { GradioConverter } from "./content_converter.js";
 import { config } from "./config.js";
 import * as path from "path";
 
-function isSafePath(filePath: string): boolean {
+async function validateFilePath(filePath: string): Promise<boolean> {
   // Skip URLs
   if (filePath.startsWith("http://") || filePath.startsWith("https://")) {
     return true;
   }
 
   try {
-    // Normalize paths (handles .. and . segments, converts separators)
+    // Normalize paths and check if within CWD
     const normalizedFilePath = path.normalize(path.resolve(filePath));
     const normalizedCwd = path.normalize(process.cwd());
 
-    // Check if the normalized file path starts with the normalized cwd
-    return normalizedFilePath.startsWith(normalizedCwd);
-  } catch {
-    if (config.debug)
-      console.error(`${filePath} failed safety check against ${process.cwd()}`);
-    return false;
+    if (!normalizedFilePath.startsWith(normalizedCwd)) {
+      throw new Error(`Path ${filePath} is outside of working directory`);
+    }
+
+    // Check if file exists
+    await fs.access(normalizedFilePath);
+    return true;
+  } catch (error) {
+    if (error instanceof Error) {
+      throw new Error(
+        `Invalid or missing file: ${filePath} (${error.message})`
+      );
+    } else {
+      throw new Error(`Invalid or missing file: ${filePath}`);
+    }
   }
 }
 
@@ -106,6 +107,7 @@ export class EndpointWrapper {
       "/generate_image",
       "/process_prompt",
       "/on_submit",
+      "/add_text",
     ];
 
     const gradio = await Client.connect(spaceName, {
@@ -204,10 +206,11 @@ export class EndpointWrapper {
       const param = endpointParams.find(
         (p) => p.parameter_name === key || p.label === key
       );
+      console.error(`parameter assessment of ${key}`);
       if (param && isFileParameter(param) && typeof value === "string") {
-        if (isSafePath(value) && !config.debug) {
-          parameters[key] = handle_file(value);
-        }
+        console.error(` ${key} is a file of type string`);
+        await validateFilePath(value);
+        parameters[key] = handle_file(value);
       }
     }
 
@@ -225,17 +228,10 @@ export class EndpointWrapper {
     server: Server
   ): Promise<CallToolResult> {
     try {
-      // Validate file paths in parameters
-      for (const [key, value] of Object.entries(parameters)) {
-        if (typeof value === "string" && !isSafePath(value)) {
-          throw new Error(
-            `Invalid file path: ${value}. Only paths within the current working directory are allowed.`
-          );
-        }
-      }
-
       let result: any;
-      const submission = this.client.submit(
+      let submission: any;
+
+      submission = this.client.submit(
         this.anonIndex < 0 ? this.endpointName : this.anonIndex,
         parameters
       );

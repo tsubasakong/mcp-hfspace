@@ -1,6 +1,6 @@
 # mcp-hfspace MCP Server 🤗
 
-Connect to [HuggingFace Spaces](https://huggingface.co/)  with minimial configuration needed simply add your spaces and go!.
+Connect to [HuggingFace Spaces](https://huggingface.co/)  with minimal configuration needed simply add your spaces and go!.
 
 
 If no spaces are specified, connects to `evalstate/FLUX.1-schnell` image generator by default.
@@ -23,13 +23,22 @@ To access private spaces, use `--hf-token` argument or `HF_TOKEN` environment va
 
 ### Example 1 - Image Generation (Download Image / Claude Vision)
 
+We'll use `shuttle/
 By default, files are . Available files in the root of the . 
 
-### Example 2 - Text-to-Speech (Download Audio)
+### Example 2 - Image Recognition
 
-### Example 3 - Speech-to-Text (Upload Audio)
+We'll use `big-vision/paligemma-hf` to ask a question of an image. In this case, we don't want to upload the Image to Claude - we'll reference a file in the WORK_DIR. So, we can ask Claude:
 
-### Example 4 - Image-to-Image
+`paligemma to identify who is in the picture "bowie.jpg"` -> `Text Output: david bowie`
+
+### Example 3 - Text-to-Speech (Download Audio)
+
+In _Claude Desktop Mode_, the audio file is saved in the WORK_DIR, and Claude is. If not in desktop mode, the file is returned as a Blob to the Client (useful if it supports embedded Audio attachments).
+
+### Example 4 - Speech-to-Text (Upload Audio)
+
+### Example 5 - Image-to-Image
 
 
 
@@ -118,7 +127,9 @@ On Windows: `%APPDATA%/Claude/claude_desktop_config.json`
       "command": "/path/to/mcp-hfspace/build/index.js"
       "args:" [
         "Qwen/Qwen2-72B-Instruct",
-        "black-forest-labs/FLUX.1-schnell"
+        "black-forest-labs/FLUX.1-schnell",
+        "--work-dir=~/mcp-files/ or x:/temp/mcp-files/",
+        "--HF_TOKEN=HF_{optional token}"
         ]
     }
   }
@@ -140,5 +151,9 @@ The Inspector will provide a URL to access debugging tools in your browser.
 **mcp-hfspace**
 
 - Content download only works from spaces with Public visibility.
+- Endpoints with unnamed parameters are unsupported for the moment.
 
 **Claude Desktop**
+
+- Claude Desktop 0.75 doesn't seem to respond to errors from the MCP Server, timing out instead. For persistent issues, use the MCP Inspector to get a better look at diagnosing what's going wrong. If something suddenly stops working, it's probably a quota issue.
+- Claude Desktop seems to use a hard timeout value of 60s, and doesn't seem to use Progress Notifications to manage UX alive. If you are using ZeroGPU spaces, large/heavy jobs may timeout. Check the WORK_DIR for results though; the MCP Server will still capture the result.

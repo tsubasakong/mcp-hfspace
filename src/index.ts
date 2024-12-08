@@ -46,7 +46,7 @@ if (endpoints.size === 0) {
 const server = new Server(
   {
     name: "mcp-hfspace",
-    version: "0.3.1",
+    version: "0.3.3",
   },
   {
     capabilities: {
