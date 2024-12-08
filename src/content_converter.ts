@@ -215,7 +215,7 @@ const audioConverter: ConverterFn = async (_component, value, spaceInfo) => {
         resource: {
           uri: `${pathToFileURL(path.resolve(filename)).href}`,
           mimetype: `text/plain`,
-          text: `Your audio was succesfully created and is available for playback. Claude Desktop does not currently support audio content`,
+          text: `Your audio was succesfully created and is available for playback at ${path.resolve(filename)}. Claude Desktop does not currently support audio content`,
         },
       };
     } else {

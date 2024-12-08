@@ -15,6 +15,8 @@ By default the current working directory is used by default which for Claude on 
 
 To use private spaces, supply your Hugging Face Token with either the  `--hf-token=hf_...` argument or `HF_TOKEN` environment variable.
 
+Run multiple server instances to use different working folders and tokens if needed.
+
 ## File Handling and Claude Desktop Mode
 
 By default, the server starts in "Claude Desktop" mode. This is intended to make best use of that Clients capabilities. 
@@ -23,16 +25,22 @@ By default, the server starts in "Claude Desktop" mode. This is intended to make
 
 We'll use `shuttleai/shuttle-3.1-aesthetic` to generate an image. The image gets saved to the Work Directory, as well as included in Claude's context window - enabling Claude's vision capabilities. 
 
+![Image Generation Comparison](./2024-12-05-flux-shuttle.png)
 
-### Example 2 - Image Recognition
+### Example 2 - Image Recognition (Upload Image)
 
 We'll use `big-vision/paligemma-hf` to ask a question of an image. In this case, we don't want to upload the Image to Claude - we'll reference a file in the WORK_DIR. So, we can ask Claude:
 
 `paligemma to identify who is in the picture "bowie.jpg"` -> `Text Output: david bowie`
 
+_If you are uploading something to Claude's context use the Paperclip Attachment button, otherwise specify the filename for the Server to send directly._
+
 ### Example 3 - Text-to-Speech (Download Audio)
 
-In _Claude Desktop Mode_, the audio file is saved in the WORK_DIR, and Claude is. If not in desktop mode, the file is returned as a Blob to the Client (useful if it supports embedded Audio attachments).
+In _Claude Desktop Mode_, the audio file is saved in the WORK_DIR, and Claude is. If not in desktop mode, the file is returned base64 encoded to the Client (useful if it supports embedded Audio attachments).
+
+![Voice Production](./2024-12-08-mcp-parler.png)
+
 
 ### Example 4 - Speech-to-Text (Upload Audio)
 
@@ -40,7 +48,6 @@ In _Claude Desktop Mode_, the audio file is saved in the WORK_DIR, and Claude is
 
 
 
-![MIRO/Claude Desktop Screenshot](./2024-12-05-flux-shuttle.png)
 
 ### Specifying API Endpoint
 
@@ -57,7 +64,6 @@ Some recommended spaces to try:
 - shuttleai/shuttle-3.1-aesthetic
 - black-forest-labs/FLUX.1-schnell
 - Qwen/Qwen2.5-72B-Instruct
-- nicoaspra/Create_PDF_Booklet
 
 **Image-to-Image**
 
