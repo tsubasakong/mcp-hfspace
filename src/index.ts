@@ -7,7 +7,10 @@ import {
   ListToolsRequestSchema,
   ListPromptsRequestSchema,
   GetPromptRequestSchema,
+  ListResourcesRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
+import { promises as fs } from 'fs';
+import { join } from 'path';
 
 import { EndpointWrapper } from "./endpoint_wrapper.js";
 import { parseConfig } from "./config.js";
@@ -21,7 +24,6 @@ process.chdir(config.workDir);
 // Create a map to store endpoints by their tool names
 const endpoints = new Map();
 
-// Initialize all endpoints
 for (const spacePath of config.spacePaths) {
   try {
     const endpoint = await EndpointWrapper.createEndpoint(spacePath);
@@ -44,13 +46,15 @@ if (endpoints.size === 0) {
 const server = new Server(
   {
     name: "mcp-hfspace",
-    version: "0.3.0",
+    version: "0.3.1",
   },
   {
     capabilities: {
       tools: {},
       prompts: {},
-      resources: {},
+      resources: {
+        list: true,
+      },
     },
   }
 );
@@ -97,15 +101,30 @@ server.setRequestHandler(ListPromptsRequestSchema, async () => {
 
 server.setRequestHandler(GetPromptRequestSchema, async (request) => {
   const promptName = request.params.name;
-  const endpoint = Array.from(endpoints.values()).find(
-    (ep) => ep.promptName() === promptName
-  );
+  const endpoint = endpoints.get(promptName);
 
   if (!endpoint) {
     throw new Error(`Unknown prompt: ${promptName}`);
   }
 
   return await endpoint.getPromptTemplate(request.params.arguments);
+});
+
+server.setRequestHandler(ListResourcesRequestSchema, async () => {
+  try {
+    const files = await fs.readdir(config.workDir);
+    const resources = files.map(file => ({
+      uri: `file://${join(config.workDir, file)}`,
+      name: file,
+      type: 'file'
+    }));
+    return { resources };
+  } catch (error) {
+    if (error instanceof Error) {
+      throw new Error(`Failed to list resources: ${error.message}`);
+    }
+    throw error;
+  }
 });
 
 /**

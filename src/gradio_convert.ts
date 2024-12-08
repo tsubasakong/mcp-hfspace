@@ -24,6 +24,15 @@ function parseNumberConstraints(description: string = "") {
   return constraints;
 }
 
+export function isFileParameter(param: ApiParameter): boolean {
+  return (
+    param.python_type?.type === "filepath" ||
+    param.type === "Blob | File | Buffer" ||
+    param.component === "Image" ||
+    param.component === "Audio"
+  );
+}
+
 export function convertParameter(param: ApiParameter): ParameterSchema {
   // Handle file types first
   if (param.python_type?.type === "filepath") {

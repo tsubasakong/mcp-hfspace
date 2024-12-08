@@ -1,9 +1,12 @@
 {
-  "name": "mcp-hfspace",
-  "version": "0.1.0",
-  "description": "Quick Connect to a HuggingFace Space",
+  "name": "@llmindset/mcp-hfspace",
+  "version": "0.3.1",
+  "description": "MCP Server to connect to Hugging Face spaces. Simple configuration, Claude Desktop friendly.",
   "private": true,
   "type": "module",
+  "publishConfig": {
+    "access": "public"
+  },
   "bin": {
     "mcp-hfspace": "./build/index.js"
   },
@@ -21,10 +24,10 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "0.6.0",
-    "minimist": "^1.2.8",
-    "vitest": "^2.1.8"
+    "minimist": "^1.2.8"
   },
   "devDependencies": {
+    "vitest": "^2.1.8",
     "@gradio/client": "^1.8.0",
     "@types/minimist": "^1.2.5",
     "@types/node": "^20.11.24",
