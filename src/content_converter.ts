@@ -90,7 +90,49 @@ const getExtensionFromFilename = (url: string): string | null => {
   return null;
 };
 
-const convertUrlToBase64 = async (url: string, expectedMimeType: string) => {
+const getMimeTypeFromOriginalName = (origName: string): string | null => {
+  const extension = origName.split('.').pop()?.toLowerCase();
+  if (!extension) return null;
+  
+  // Common image formats
+  if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg'].includes(extension)) {
+    return `image/${extension}`;
+  }
+  
+  // Common audio formats
+  if (['mp3', 'wav', 'ogg', 'aac', 'm4a'].includes(extension)) {
+    return `audio/${extension}`;
+  }
+  
+  // For unknown types, fall back to application/*
+  return `application/${extension}`;
+};
+
+const determineMimeType = (value: any, responseHeaders: Headers): string => {
+  // First priority: mime_type from the value object
+  if (value?.mime_type) {
+    return value.mime_type;
+  }
+
+  // Second priority: derived from orig_name
+  if (value?.orig_name) {
+    const mimeFromName = getMimeTypeFromOriginalName(value.orig_name);
+    if (mimeFromName) {
+      return mimeFromName;
+    }
+  }
+
+  // Third priority: response headers
+  const headerMimeType = responseHeaders.get("content-type");
+  if (headerMimeType && headerMimeType !== 'text/plain') {
+    return headerMimeType;
+  }
+
+  // Final fallback
+  return 'text/plain';
+};
+
+const convertUrlToBase64 = async (url: string, value: any) => {
   const headers: HeadersInit = {};
   if (config.hfToken) {
     headers.Authorization = `Bearer ${config.hfToken}`;
@@ -104,19 +146,11 @@ const convertUrlToBase64 = async (url: string, expectedMimeType: string) => {
     );
   }
 
-  const mimeType = response.headers.get("content-type") || expectedMimeType;
+  const mimeType = determineMimeType(value, response.headers);
   const originalExtension = getExtensionFromFilename(url);
-
-  // Validate MIME type based on expected type
-//  if (expectedMimeType.startsWith("image/") && !isImageMimeType(mimeType)) {
-  //  throw new Error(`Expected image type but got: ${mimeType}`);
-  //}
-//  if (expectedMimeType.startsWith("audio/") && !isAudioMimeType(mimeType)) {
- //   throw new Error(`Expected audio type but got: ${mimeType}`);
-//  }
-
   const arrayBuffer = await response.arrayBuffer();
   const base64Data = Buffer.from(arrayBuffer).toString("base64");
+  
   return { mimeType, base64Data, arrayBuffer, originalExtension };
 };
 
@@ -143,7 +177,7 @@ const imageConverter: ConverterFn = async (_component, value, spaceInfo) => {
   try {
     const { mimeType, base64Data, arrayBuffer, originalExtension } = await convertUrlToBase64(
       value.url,
-      "image/png"
+      value
     );
     await saveFile(arrayBuffer, mimeType, "image", spaceInfo.spaceName, originalExtension);
     return {
@@ -165,7 +199,7 @@ const audioConverter: ConverterFn = async (_component, value, spaceInfo) => {
   try {
     const { mimeType, base64Data, arrayBuffer, originalExtension } = await convertUrlToBase64(
       value.url,
-      "audio/wav"
+      value
     );
     const filename = await saveFile(
       arrayBuffer,

@@ -206,9 +206,7 @@ export class EndpointWrapper {
       const param = endpointParams.find(
         (p) => p.parameter_name === key || p.label === key
       );
-      console.error(`parameter assessment of ${key}`);
       if (param && isFileParameter(param) && typeof value === "string") {
-        console.error(` ${key} is a file of type string`);
         await validateFilePath(value);
         parameters[key] = handle_file(value);
       }
