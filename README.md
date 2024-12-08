@@ -1,16 +1,37 @@
-# mcp-hfspace MCP Server
+# mcp-hfspace MCP Server 🤗
 
-Connect to [HuggingFace Spaces](https://huggingface.co/) with minimial configuration needed.
+Connect to [HuggingFace Spaces](https://huggingface.co/)  with minimial configuration needed simply add your spaces and go!.
 
-Minimal configuration needed, simply add your spaces to the arguments and go! 
 
-If no spaces are specified, connects to `black-forest-labs/FLUX.1-schnell` image generator by default.
+If no spaces are specified, connects to `evalstate/FLUX.1-schnell` image generator by default.
+
+@llmindset/mcp-hfspace.
+
+
 
 ## Basic setup
 
-Supply a list of HuggingFace spaces in the arguments. mcp-hfspace will usually be able to find the most appropriate endpoint.
+Supply a list of HuggingFace spaces in the arguments. mcp-hfspace will usually be able to find the most appropriate endpoint and automatically configure for usage.
 
-For example: `.../build/index.js Qwen/Qwen2.5-72B-Instruct`
+For example: `.../build/index.js Qwen/Qwen2.5-72B-Instruct evalstate/`
+
+It is strongly recommended to set a Working Directory for handling upload and download of images and other file-based content. Do that with the `--work-dir` argument or `MCP_HF_WORK_DIR` environment variable. The current working directory is used by default which for Claude on Windows is `TODO` and on MacOS is `TODO`.
+
+To access private spaces, use `--hf-token` argument or `HF_TOKEN` environment variable to set your HuggingFace token.
+
+## File Handling and Claude Desktop Mode
+
+### Example 1 - Image Generation (Download Image / Claude Vision)
+
+By default, files are . Available files in the root of the . 
+
+### Example 2 - Text-to-Speech (Download Audio)
+
+### Example 3 - Speech-to-Text (Upload Audio)
+
+### Example 4 - Image-to-Image
+
+
 
 ![MIRO/Claude Desktop Screenshot](./2024-12-05-flux-shuttle.png)
 
@@ -30,6 +51,10 @@ Some recommended spaces to try:
 - black-forest-labs/FLUX.1-schnell
 - Qwen/Qwen2.5-72B-Instruct
 - nicoaspra/Create_PDF_Booklet
+
+**Image-to-Image**
+
+- yanze/PuLID-FLUX
 
 **Text-to-speech:**
 

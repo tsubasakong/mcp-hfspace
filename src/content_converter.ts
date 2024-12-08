@@ -38,7 +38,7 @@ export class GradioConverter {
     value: any,
     spaceInfo: SpaceInfo
   ): Promise<TextContent | ImageContent | EmbeddedResource> {
-    if (true) {
+    if (config.debug) {
       await fs.writeFile(generateFilename("debug","json",spaceInfo.spaceName), JSON.stringify(value,null,2));
     }
     const converter =
@@ -169,14 +169,13 @@ const audioConverter: ConverterFn = async (_component, value, spaceInfo) => {
       originalExtension
     );
 
-    console.error(`claude dekstop? ${config.claudeDesktopMode}`)
     if (config.claudeDesktopMode) {
       return {
         type: "resource",
         resource: {
           uri: `${pathToFileURL(path.resolve(filename)).href}`,
           mimetype: `text/plain`,
-          text: `Your audio was succesfully created and is available for playback. Claude does not currently support audio content`,
+          text: `Your audio was succesfully created and is available for playback. Claude Desktop does not currently support audio content`,
         },
       };
     } else {

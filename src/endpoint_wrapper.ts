@@ -25,12 +25,33 @@ import type {
 import { createProgressNotifier } from "./progress_notifier.js";
 import { GradioConverter } from "./content_converter.js";
 import { config } from "./config.js";
+import * as path from "path";
+
+function isSafePath(filePath: string): boolean {
+  // Skip URLs
+  if (filePath.startsWith("http://") || filePath.startsWith("https://")) {
+    return true;
+  }
+
+  try {
+    // Normalize paths (handles .. and . segments, converts separators)
+    const normalizedFilePath = path.normalize(path.resolve(filePath));
+    const normalizedCwd = path.normalize(process.cwd());
+
+    // Check if the normalized file path starts with the normalized cwd
+    return normalizedFilePath.startsWith(normalizedCwd);
+  } catch {
+    if (config.debug)
+      console.error(`${filePath} failed safety check against ${process.cwd()}`);
+    return false;
+  }
+}
 
 export class SpaceInfo {
   constructor(
-    public readonly fullPath: string,    // e.g. "parler-tts/parler_tts"
-    public readonly spaceName: string,   // e.g. "parler_tts"
-    public readonly owner: string        // e.g. "parler-tts"
+    public readonly fullPath: string, // e.g. "parler-tts/parler_tts"
+    public readonly spaceName: string, // e.g. "parler_tts"
+    public readonly owner: string // e.g. "parler-tts"
   ) {}
 
   getToolName(endpointName: string, anonIndex: number): string {
@@ -164,22 +185,29 @@ export class EndpointWrapper {
     };
   }
 
-  async call(request: CallToolRequest, server: Server): Promise<CallToolResult> {
+  async call(
+    request: CallToolRequest,
+    server: Server
+  ): Promise<CallToolResult> {
     const progressToken = request.params._meta?.progressToken as
       | string
       | number
       | undefined;
 
     const parameters = request.params.arguments as Record<string, any>;
-    
+
     // Get the endpoint parameters to check against
     const endpointParams = this.endpoint.parameters;
-    
+
     // Process each parameter, applying handle_file for file inputs
     for (const [key, value] of Object.entries(parameters)) {
-      const param = endpointParams.find(p => p.parameter_name === key || p.label === key);
+      const param = endpointParams.find(
+        (p) => p.parameter_name === key || p.label === key
+      );
       if (param && isFileParameter(param) && typeof value === "string") {
-        parameters[key] = handle_file(value);
+        if (isSafePath(value) && !config.debug) {
+          parameters[key] = handle_file(value);
+        }
       }
     }
 
@@ -197,6 +225,15 @@ export class EndpointWrapper {
     server: Server
   ): Promise<CallToolResult> {
     try {
+      // Validate file paths in parameters
+      for (const [key, value] of Object.entries(parameters)) {
+        if (typeof value === "string" && !isSafePath(value)) {
+          throw new Error(
+            `Invalid file path: ${value}. Only paths within the current working directory are allowed.`
+          );
+        }
+      }
+
       let result: any;
       const submission = this.client.submit(
         this.anonIndex < 0 ? this.endpointName : this.anonIndex,
@@ -220,7 +257,11 @@ export class EndpointWrapper {
         throw new Error("No data received from endpoint");
       }
 
-      return await this.convertPredictResults(this.endpoint.returns, result, this.spaceInfo);
+      return await this.convertPredictResults(
+        this.endpoint.returns,
+        result,
+        this.spaceInfo
+      );
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : String(error);
@@ -261,11 +302,13 @@ export class EndpointWrapper {
     return {
       name: this.promptName(),
       description: `Use the ${this.getSpaceDisplayName()}.`,
-      arguments: Object.entries(schema.properties).map(([name, prop]: [string, any]) => ({
-        name,
-        description: prop.description || name,
-        required: schema.required?.includes(name) || false,
-      })),
+      arguments: Object.entries(schema.properties).map(
+        ([name, prop]: [string, any]) => ({
+          name,
+          description: prop.description || name,
+          required: schema.required?.includes(name) || false,
+        })
+      ),
     };
   }
 
@@ -277,11 +320,13 @@ export class EndpointWrapper {
 
     promptText += Object.entries(schema.properties)
       .map(([name, prop]: [string, any]) => {
-        let defaultHint = prop.default !== undefined ? ` - default: ${prop.default}` : '';
-        const value = args?.[name] || `[Provide ${prop.description || name}${defaultHint}]`;
+        let defaultHint =
+          prop.default !== undefined ? ` - default: ${prop.default}` : "";
+        const value =
+          args?.[name] || `[Provide ${prop.description || name}${defaultHint}]`;
         return `${name}: ${value}`;
       })
-      .join('\n');
+      .join("\n");
 
     return {
       description: this.promptDefinition().description,
