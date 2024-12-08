@@ -2,7 +2,6 @@
 
 Connect to [HuggingFace Spaces](https://huggingface.co/)  with minimal configuration needed simply add your spaces and go!.
 
-
 If no spaces are specified, connects to `evalstate/FLUX.1-schnell` image generator by default.
 
 @llmindset/mcp-hfspace.

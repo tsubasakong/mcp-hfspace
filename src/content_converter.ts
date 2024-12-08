@@ -91,7 +91,13 @@ const getExtensionFromFilename = (url: string): string | null => {
 };
 
 const convertUrlToBase64 = async (url: string, expectedMimeType: string) => {
-  const response = await fetch(url);
+  const headers: HeadersInit = {};
+  if (config.hfToken) {
+    headers.Authorization = `Bearer ${config.hfToken}`;
+  }
+
+  const response = await fetch(url, { headers });
+  
   if (!response.ok) {
     throw new Error(
       `Failed to fetch resource: ${response.status} ${response.statusText}`
@@ -102,12 +108,12 @@ const convertUrlToBase64 = async (url: string, expectedMimeType: string) => {
   const originalExtension = getExtensionFromFilename(url);
 
   // Validate MIME type based on expected type
-  if (expectedMimeType.startsWith("image/") && !isImageMimeType(mimeType)) {
-    throw new Error(`Expected image type but got: ${mimeType}`);
-  }
-  if (expectedMimeType.startsWith("audio/") && !isAudioMimeType(mimeType)) {
-    throw new Error(`Expected audio type but got: ${mimeType}`);
-  }
+//  if (expectedMimeType.startsWith("image/") && !isImageMimeType(mimeType)) {
+  //  throw new Error(`Expected image type but got: ${mimeType}`);
+  //}
+//  if (expectedMimeType.startsWith("audio/") && !isAudioMimeType(mimeType)) {
+ //   throw new Error(`Expected audio type but got: ${mimeType}`);
+//  }
 
   const arrayBuffer = await response.arrayBuffer();
   const base64Data = Buffer.from(arrayBuffer).toString("base64");
