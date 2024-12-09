@@ -95,7 +95,7 @@ export class EndpointWrapper {
     }
 
     const spaceName = `${pathParts[0]}/${pathParts[1]}`;
-    const endpointName = pathParts[2];
+    const endpointName = pathParts[2] ? `/${pathParts[2]}` : undefined;
 
     const preferredApis = [
       "/predict",
