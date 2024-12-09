@@ -20,17 +20,17 @@ It's possible to run multiple server instances to use different working director
 
 ## File Handling and Claude Desktop Mode
 
-By default, the server starts in "Claude Desktop" mode. This is intended to make best use of that Clients capabilities.
+By default, the Server operates in _Claude Desktop Mode_. In this mode, Images are returned directly in the tool responses, while other binaries are saved in the working folder and a message is returned with the URI. This will usually give the best experience if using Claude Desktop as the client.
 
 ### Example 1 - Image Generation (Download Image / Claude Vision)
 
-We'll use `shuttleai/shuttle-3.1-aesthetic` to generate an image. The image gets saved to the Work Directory, as well as included in Claude's context window - enabling Claude's vision capabilities.
+We'll use `shuttleai/shuttle-3.1-aesthetic` to generate an image. The image gets saved to the Work Directory, as well as included in Claude's context window - so we can use  Claude's vision capabilities.
 
 ![Image Generation Comparison](./2024-12-05-flux-shuttle.png)
 
 ### Example 2 - Image Recognition (Upload Image)
 
-We'll use `big-vision/paligemma-hf` to ask a question of an image. In this case, we don't want to upload the Image to Claude - we'll reference a file in the WORK_DIR. So, we can ask Claude:
+We'll use `big-vision/paligemma-hf` to ask a question of an image. In this case, we specify the filename which is available in the Working Directory: we  don't want to upload the Image directly to Claude's context window. So, we can ask Claude:
 
 `paligemma to identify who is in the picture "bowie.jpg"` -> `Text Output: david bowie`
 
@@ -53,6 +53,10 @@ In this example, we specify the filename for the `microsoft/OmniParser` to use, 
 ### Specifying API Endpoint
 
 If you need, you can specify a specific API Endpoint by adding it to the spacename. So rather than passing in `Qwen/Qwen2.5-72B-Instruct` you would use `Qwen/Qwen2.5-72B-Instruct/model_chat`.
+
+### Claude Desktop Mode
+
+This can be disabled with the option --desktop-mode=false or the environment variable CLAUDE_DESKTOP_MODE=false. In this case, content as returned as an embedded Base64 encoded Resource.
 
 ## Recommended Spaces
 
@@ -87,15 +91,15 @@ haoheliu/audioldm2-text2audio-text2music
 
 ### Claude Desktop Mode
 
-By default, the Server operates in _Claude Desktop Mode_. In this mode, Images are returned directly in the tool responses, while other binaries are saved in the working folder and a message is returned with the URI.
 
-Text Content is returned as a Text content type.
-
-For other Client deployments, you will probably want to switch thiss off so use --desktop-mode=false or CLAUDE_DESKTOP_MODE=false.
 
 ### Prompts
 
 Prompts for each Space are generated, and provide an opportunity to input. Bear in mind that often Spaces aren't configured with particularly helpful labels etc. Claude is actually very good at figuring this out, and the Tool description is quite rich (but not visible in Claude Desktop).
+
+### Private Spaces
+
+Private Spaces are supported with a HuggingFace token. The Token is used to download and save content.
 
 ## Development
 
