@@ -97,6 +97,10 @@ haoheliu/audioldm2-text2audio-text2music
 
 Prompts for each Space are generated, and provide an opportunity to input. Bear in mind that often Spaces aren't configured with particularly helpful labels etc. Claude is actually very good at figuring this out, and the Tool description is quite rich (but not visible in Claude Desktop).
 
+### Resources
+
+A list of files in the WORK_DIR is returned, and as a convenience returns the name as "Use the file..." text. If you want to add something to Claude's context, use the paperclip - otherwise specify the filename for the MCP Server. Claude does not support transmitting resources from within Context.
+
 ### Private Spaces
 
 Private Spaces are supported with a HuggingFace token. The Token is used to download and save content.
