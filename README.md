@@ -1,8 +1,8 @@
 # mcp-hfspace MCP Server 🤗
 
-Connect to [HuggingFace Spaces](https://huggingface.co/)  with minimal configuration needed - simply add your spaces and go!
+Connect to [HuggingFace Spaces](https://huggingface.co/spaces)  with minimal setup needed - simply add your spaces and go!
 
-With no configuration, it automatically connects to `evalstate/FLUX.1-schnell` providing Image Generation capabilities by default.
+By default, it connects to `evalstate/FLUX.1-schnell` providing Image Generation capabilities to Claude Desktop.
 
 ## Basic setup
 
@@ -10,7 +10,7 @@ Supply a list of HuggingFace spaces in the arguments. mcp-hfspace will find the 
 
 By default the current working directory is used for file upload/download.
 
-On Windows this is a read/write folder at `\users\<username>\AppData\Roaming\Claude\<version.number\`, and on MacOS is the root: `/`.
+On Windows this is a read/write folder at `\users\<username>\AppData\Roaming\Claude\<version.number\`, and on MacOS it is the is the read-only root: `/`.
 
 It is recommended to override this and set  a Working Directory for handling upload and download of images and other file-based content. Specify either the `--work-dir=/your_directory` argument or `MCP_HF_WORK_DIR` environment variable.
 
@@ -48,7 +48,7 @@ In _Claude Desktop Mode_, the audio file is saved in the WORK_DIR, and Claude is
 
 In this example, we specify the filename for the `microsoft/OmniParser` to use, and get returned an annotated Image and 2 separate pieces of text: descriptions and coordinates. The prompt used was `use omniparser to analyse ./screenshot.png` and `use the analysis to produce an artifact that reproduces that screen`.
 
-![Omniparser and Artifcat](./2024-12-08-mcp-omni-artifact.png)
+![Omniparser and Artifact](./2024-12-08-mcp-omni-artifact.png)
 
 ### Specifying API Endpoint
 
@@ -62,8 +62,13 @@ This can be disabled with the option --desktop-mode=false or the environment var
 
 Some recommended spaces to try:
 
+### Image Generation
+
 - shuttleai/shuttle-3.1-aesthetic
 - black-forest-labs/FLUX.1-schnell
+
+### Chat
+
 - Qwen/Qwen2.5-72B-Instruct
 
 ### Image-to-Image
@@ -73,7 +78,6 @@ Some recommended spaces to try:
 ### Text-to-speech
 
 - parler-tts/parler_tts
-- suno/bark
 
 ### Speech-to-text
 
@@ -138,6 +142,6 @@ On Windows: `%APPDATA%/Claude/claude_desktop_config.json`
 
 ### HuggingFace Spaces
 
-- If ZeroGPU quotas or queues are too long, try duplicating the space. If your job takes less than sixty seconds, you can usually change the Python `@space[]` decorator to acquire less quota when running the job.
-- If you have a HuggingFace account, The Gradio API does not use your professional account.
-- If ZeroGPU quotas become an issue, try duplicating the space, make it private, use dedicated hardware and use HF_TOKEN to access.
+- If ZeroGPU quotas or queues are too long, try duplicating the space. If your job takes less than sixty seconds, you can usually change the decorate `@spaces.GPU(duration=20)` in `app.py` to request less quota when running the job.
+- If you have a HuggingFace Pro account, please note that The Gradio API does not your additional quote for ZeroGPU jobs - you will need to set an `X-IP-Token` header to achieve that.
+- If you have a private space, and dedicated hardware your HF_TOKEN will give you direct access to that - no quota's apply. I recommend this if you are using for any kind of Production task.
