@@ -2,11 +2,11 @@
 
 Use NPX `@llmindset/mcp-hfspace` or download and build from here.
 
-Connect to [HuggingFace Spaces](https://huggingface.co/spaces)  with minimal setup needed - simply add your spaces and go!
+Connect to [Hugging Face Spaces](https://huggingface.co/spaces)  with minimal setup needed - simply add your spaces and go!
 
 By default, it connects to `evalstate/FLUX.1-schnell` providing Image Generation capabilities to Claude Desktop.
 
-![Default Setup](./2024-12-09-flower.png)
+![Default Setup](./images/2024-12-09-flower.png)
 
 ## Basic setup
 
@@ -30,16 +30,16 @@ URLs can also be supplied as inputs - the content gets passed to the Space.
 
 ### Example 1 - Image Generation (Download Image / Claude Vision)
 
-We'll use `shuttleai/shuttle-3.1-aesthetic` to generate an image. The image gets saved to the Work Directory, as well as included in Claude's context window - so we can use  Claude's vision capabilities.
+We'll use Claude to compare images created by `shuttleai/shuttle-3.1-aesthetic` and `FLUX.1-schnell`. The images gets saved to the Work Directory, as well as included in Claude's context window - so Claude can use its vision capabilities.
 
-![Image Generation Comparison](./2024-12-05-flux-shuttle.png)
+![Image Generation Comparison](./images/2024-12-05-flux-shuttle.png)
 
 ### Example 2 - Vision Model (Upload Image)
 
 We'll use `merve/paligemma2-vqav2` [space link](https://huggingface.co/spaces/merve/paligemma2-vqav2) to query an image. In this case, we specify the filename which is available in the Working Directory: we  don't want to upload the Image directly to Claude's context window. So, we can prompt Claude:
 
 `use paligemma to find out who is in "test_gemma.jpg"` -> `Text Output: david bowie`
-![Vision - File Upload](./2024-12-09-bowie.png)
+![Vision - File Upload](./images/2024-12-09-bowie.png)
 
 _If you are uploading something to Claude's context use the Paperclip Attachment button, otherwise specify the filename for the Server to send directly._
 
@@ -49,25 +49,25 @@ We can also supply a URL. For example : `use paligemma to detect humans in https
 
 In _Claude Desktop Mode_, the audio file is saved in the WORK_DIR, and Claude is notified of the creation. If not in desktop mode, the file is returned base64 encoded to the Client (useful if it supports embedded Audio attachments).
 
-![Voice Production](./2024-12-08-mcp-parler.png)
+![Voice Production](./images/2024-12-08-mcp-parler.png)
 
 ### Example 4 - Speech-to-Text (Upload Audio)
 
 Here, we use `hf-audio/whisper-large-v3-turbo` to transcribe some audio, and make it available to Claude.
 
-![Audio Transcribe](./2024-12-09-transcribe.png)
+![Audio Transcribe](./images/2024-12-09-transcribe.png)
 
 ### Example 5 - Image-to-Image
 
 In this example, we specify the filename for `microsoft/OmniParser` to use, and get returned an annotated Image and 2 separate pieces of text: descriptions and coordinates. The prompt used was `use omniparser to analyse ./screenshot.png` and `use the analysis to produce an artifact that reproduces that screen`.
 
-![Omniparser and Artifact](./2024-12-08-mcp-omni-artifact.png)
+![Omniparser and Artifact](./images/2024-12-08-mcp-omni-artifact.png)
 
 ### Example 6 - Chat
 
 In this example, Claude sets a number of reasoning puzzles for Qwen, and asks follow-up questions for clarification.
 
-![Qwen Reasoning Test](./2024-12-09-qwen-reason.png)
+![Qwen Reasoning Test](./images/2024-12-09-qwen-reason.png)
 
 ### Specifying API Endpoint
 
