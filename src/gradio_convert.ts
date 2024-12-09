@@ -34,37 +34,31 @@ export function isFileParameter(param: ApiParameter): boolean {
 }
 
 export function convertParameter(param: ApiParameter): ParameterSchema {
-  // Handle file types first
-  if (param.python_type?.type === "filepath") {
-    let fileDescription = "Accepts: URL, file path, or resource identifier";
-    
-    if (param.component === "Audio") {
-      fileDescription = "Accepts: Audio file URL, file path, or resource identifier";
-    } else if (param.component === "Image") {
-      fileDescription = "Accepts: Image file URL, file path, or resource identifier";
-    }
+  // Start with determining the base type and description
+  let baseType = param.type || "string";
+  let baseDescription = param.python_type?.description || param.label || undefined;
 
-    return {
-      type: "string",
-      description: fileDescription,
-      ...(param.example_input && {
-        examples: [param.example_input.url || param.example_input.path]
-      }),
-    };
+  // Special case for chat history - override type and description
+  if (param.parameter_name === "history" && param.component === "Chatbot") {
+    baseType = "array";
+    baseDescription = "Chat history as an array of message pairs. Each pair is [user_message, assistant_message] where messages can be text strings or null. Advanced: messages can also be file references or UI components.";
   }
 
-  // Handle Blob | File | Buffer type
-  if (param.type === "Blob | File | Buffer") {
-    return {
-      type: "string",
-      description: "Accepts: URL, file path, or resource identifier",
-      examples: [param.example_input?.url || param.example_input?.path].filter(Boolean),
-    };
+  // Handle file types with specific descriptions
+  if (isFileParameter(param)) {
+    baseType = "string"; // Always string for file inputs
+    if (param.component === "Audio") {
+      baseDescription = "Accepts: Audio file URL, file path, or resource identifier";
+    } else if (param.component === "Image") {
+      baseDescription = "Accepts: Image file URL, file path, or resource identifier";
+    } else {
+      baseDescription = "Accepts: URL, file path, or resource identifier";
+    }
   }
 
   const baseSchema = {
-    type: param.type || "string", // Default to string type if empty
-    description: param.python_type?.description || param.label || undefined,
+    type: baseType,
+    description: baseDescription,
     ...(param.parameter_has_default && {
       default: param.parameter_default,
     }),

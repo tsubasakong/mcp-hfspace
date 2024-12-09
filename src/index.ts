@@ -9,6 +9,7 @@ import {
   ListPromptsRequestSchema,
   GetPromptRequestSchema,
   ListResourcesRequestSchema,
+  ReadResourceRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 import { promises as fs } from "fs";
 import { join } from "path";
@@ -113,11 +114,20 @@ server.setRequestHandler(GetPromptRequestSchema, async (request) => {
 server.setRequestHandler(ListResourcesRequestSchema, async () => {
   try {
     const files = await fs.readdir(config.workDir);
-    const resources = files.map((file) => ({
-      uri: `file://${join(config.workDir, file)}`,
-      name: `my working folder is "${process.cwd()}" **${file}**`,
-      type: "file",
-    }));
+    const resources = [];
+    
+    for (const file of files) {
+      const fullPath = join(config.workDir, file);
+      const stats = await fs.lstat(fullPath);
+      
+      if (stats.isFile()) {
+        resources.push({
+          uri: `file://./${file}`,
+          name: `File: ${file}`,
+        });
+      }
+    }
+    
     return { resources };
   } catch (error) {
     if (error instanceof Error) {
@@ -126,6 +136,22 @@ server.setRequestHandler(ListResourcesRequestSchema, async () => {
     throw error;
   }
 });
+
+server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
+  const resourcename = request.params.uri;
+  return {
+    contents: [
+      {
+        uri: request.params.uri,
+        text: `Use the file "${request.params.uri}"`,
+        mimetype: `text/plain`
+      }
+    ]
+  }
+    
+    
+});
+
 
 /**
  * Start the server using stdio transport.
