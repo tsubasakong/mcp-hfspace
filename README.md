@@ -4,6 +4,8 @@ Connect to [HuggingFace Spaces](https://huggingface.co/spaces)  with minimal set
 
 By default, it connects to `evalstate/FLUX.1-schnell` providing Image Generation capabilities to Claude Desktop.
 
+![Default Setup](./2024-12-09-flower.png)
+
 ## Basic setup
 
 Supply a list of HuggingFace spaces in the arguments. mcp-hfspace will find the most appropriate endpoint and automatically configure for usage. An example `claude_desktop_config.json` is supplied [below.](#installation)
@@ -32,11 +34,10 @@ We'll use `shuttleai/shuttle-3.1-aesthetic` to generate an image. The image gets
 
 ### Example 2 - Vision Model (Upload Image)
 
-We'll use `merve/paligemma-hf` (https://huggingface.co/spaces/merve/paligemma2-vqav2) to query an image. In this case, we specify the filename which is available in the Working Directory: we  don't want to upload the Image directly to Claude's context window. So, we can prompt Claude:
+We'll use `merve/paligemma-hf` [space link](https://huggingface.co/spaces/merve/paligemma2-vqav2) to query an image. In this case, we specify the filename which is available in the Working Directory: we  don't want to upload the Image directly to Claude's context window. So, we can prompt Claude:
 
-`use paligemma to identify who is in the picture "bowie.jpg"` -> `Text Output: david bowie`
-
-
+`use paligemma to find out who is in "test_gemma.jpg"` -> `Text Output: david bowie`
+![Vision - File Upload](./2024-12-09-bowie.png)
 
 _If you are uploading something to Claude's context use the Paperclip Attachment button, otherwise specify the filename for the Server to send directly._
 
@@ -53,6 +54,12 @@ In _Claude Desktop Mode_, the audio file is saved in the WORK_DIR, and Claude is
 In this example, we specify the filename for the `microsoft/OmniParser` to use, and get returned an annotated Image and 2 separate pieces of text: descriptions and coordinates. The prompt used was `use omniparser to analyse ./screenshot.png` and `use the analysis to produce an artifact that reproduces that screen`.
 
 ![Omniparser and Artifact](./2024-12-08-mcp-omni-artifact.png)
+
+### Example 6 - Chat
+
+In this example, Claude sets a number of reasoning puzzles for Qwen, and asks follow-up questions for clarification. 
+
+![Qwen Reasoning Test](./2024-12-09-qwen-reason.png)
 
 ### Specifying API Endpoint
 
@@ -142,6 +149,7 @@ On Windows: `%APPDATA%/Claude/claude_desktop_config.json`
 ### mcp-hfspace
 
 - Endpoints with unnamed parameters are unsupported for the moment.
+- Full translation from some complex Python types to suitable MCP formats.
 
 ### Claude Desktop
 
