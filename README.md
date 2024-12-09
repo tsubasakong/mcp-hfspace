@@ -30,19 +30,19 @@ We'll use `shuttleai/shuttle-3.1-aesthetic` to generate an image. The image gets
 
 ![Image Generation Comparison](./2024-12-05-flux-shuttle.png)
 
-### Example 2 - Image Recognition (Upload Image)
+### Example 2 - Vision Model (Upload Image)
 
-We'll use `big-vision/paligemma-hf` to ask a question of an image. In this case, we specify the filename which is available in the Working Directory: we  don't want to upload the Image directly to Claude's context window. So, we can ask Claude:
+We'll use `merve/paligemma-hf` (https://huggingface.co/spaces/merve/paligemma2-vqav2) to query an image. In this case, we specify the filename which is available in the Working Directory: we  don't want to upload the Image directly to Claude's context window. So, we can prompt Claude:
 
-`paligemma to identify who is in the picture "bowie.jpg"` -> `Text Output: david bowie`
+`use paligemma to identify who is in the picture "bowie.jpg"` -> `Text Output: david bowie`
 
-Note that Claude fails this this test and PaliGemma passes it (this is from their example page).
+
 
 _If you are uploading something to Claude's context use the Paperclip Attachment button, otherwise specify the filename for the Server to send directly._
 
 ### Example 3 - Text-to-Speech (Download Audio)
 
-In _Claude Desktop Mode_, the audio file is saved in the WORK_DIR, and Claude is. If not in desktop mode, the file is returned base64 encoded to the Client (useful if it supports embedded Audio attachments).
+In _Claude Desktop Mode_, the audio file is saved in the WORK_DIR, and Claude is notified of the creation. If not in desktop mode, the file is returned base64 encoded to the Client (useful if it supports embedded Audio attachments).
 
 ![Voice Production](./2024-12-08-mcp-parler.png)
 
@@ -94,6 +94,7 @@ haoheliu/audioldm2-text2audio-text2music
 ### Vision Tasks
 
 - merve/paligemma2-vqav2
+- merve/paligemma-doc
 
 ## Other Features
 
