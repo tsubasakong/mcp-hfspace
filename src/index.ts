@@ -115,7 +115,7 @@ server.setRequestHandler(ListResourcesRequestSchema, async () => {
     const files = await fs.readdir(config.workDir);
     const resources = files.map((file) => ({
       uri: `file://${join(config.workDir, file)}`,
-      name: file,
+      name: `my working folder is "${process.cwd()}" **${file}**`,
       type: "file",
     }));
     return { resources };
