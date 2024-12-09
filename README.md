@@ -104,10 +104,11 @@ Some recommended spaces to try:
 
 ### Text-to-music
 
-haoheliu/audioldm2-text2audio-text2music
+- haoheliu/audioldm2-text2audio-text2music
 
 ### Vision Tasks
 
+- microsoft/OmniParser
 - merve/paligemma2-vqav2
 - merve/paligemma-doc
 
