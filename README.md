@@ -1,8 +1,8 @@
 # mcp-hfspace MCP Server 🤗
 
-Connect to [HuggingFace Spaces](https://huggingface.co/)  with minimal configuration needed - simply add your spaces and go!.
+Connect to [HuggingFace Spaces](https://huggingface.co/)  with minimal configuration needed - simply add your spaces and go!
 
-If no spaces are specified, it automatically connects to `evalstate/FLUX.1-schnell` providing Image Generation capabilities by default.
+With no configuration, it automatically connects to `evalstate/FLUX.1-schnell` providing Image Generation capabilities by default.
 
 ## Basic setup
 
