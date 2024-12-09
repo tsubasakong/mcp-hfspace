@@ -49,6 +49,10 @@ In _Claude Desktop Mode_, the audio file is saved in the WORK_DIR, and Claude is
 
 ### Example 4 - Speech-to-Text (Upload Audio)
 
+Here, we use `hf-audio/whisper-large-v3-turbo` to transcribe some audio, and make it available to Claude.
+
+![Audio Transcribe](./2024-12-09-transcribe.png)
+
 ### Example 5 - Image-to-Image
 
 In this example, we specify the filename for the `microsoft/OmniParser` to use, and get returned an annotated Image and 2 separate pieces of text: descriptions and coordinates. The prompt used was `use omniparser to analyse ./screenshot.png` and `use the analysis to produce an artifact that reproduces that screen`.
@@ -57,7 +61,7 @@ In this example, we specify the filename for the `microsoft/OmniParser` to use, 
 
 ### Example 6 - Chat
 
-In this example, Claude sets a number of reasoning puzzles for Qwen, and asks follow-up questions for clarification. 
+In this example, Claude sets a number of reasoning puzzles for Qwen, and asks follow-up questions for clarification.
 
 ![Qwen Reasoning Test](./2024-12-09-qwen-reason.png)
 
