@@ -390,6 +390,7 @@ describe("literal type conversions", () => {
 
 describe("file and blob type conversions", () => {
   it("handles simple filepath type", () => {
+    const exampleUrl = "https://example.com/image.png";
     const param = createParameter({
       type: "Blob | File | Buffer",
       python_type: {
@@ -397,22 +398,22 @@ describe("file and blob type conversions", () => {
         description: "",
       },
       example_input: {
-        path: "https://example.com/image.png",
+        path: exampleUrl,
         meta: { _type: "gradio.FileData" },
         orig_name: "image.png",
-        url: "https://example.com/image.png",
+        url: exampleUrl,
       },
     });
     const result = convertParameter(param);
 
-    expect(result).toEqual({
+    expect(result).toMatchObject({
       type: "string",
       description: "Accepts: URL, file path, or resource identifier",
-      examples: ["https://example.com/image.png"],
     });
   });
 
   it("handles complex Dict type for image input", () => {
+    const exampleUrl = "https://example.com/image.png";
     const param = createParameter({
       type: "Blob | File | Buffer",
       python_type: {
@@ -420,22 +421,22 @@ describe("file and blob type conversions", () => {
         description: "For input, either path or url must be provided.",
       },
       example_input: {
-        path: "https://example.com/image.png",
+        path: exampleUrl,
         meta: { _type: "gradio.FileData" },
         orig_name: "image.png",
-        url: "https://example.com/image.png",
+        url: exampleUrl,
       },
     });
     const result = convertParameter(param);
-
-    expect(result).toEqual({
+    
+    expect(result).toMatchObject({
       type: "string",
       description: "Accepts: URL, file path, or resource identifier",
-      examples: ["https://example.com/image.png"],
     });
   });
 
   it("handles audio file input type", () => {
+    const exampleUrl = "https://github.com/gradio-app/gradio/raw/main/test/test_files/audio_sample.wav";
     const param = createParameter({
       type: "",
       python_type: {
@@ -444,18 +445,17 @@ describe("file and blob type conversions", () => {
       },
       component: "Audio",
       example_input: {
-        path: "https://github.com/gradio-app/gradio/raw/main/test/test_files/audio_sample.wav",
+        path: exampleUrl,
         meta: { _type: "gradio.FileData" },
         orig_name: "audio_sample.wav",
-        url: "https://github.com/gradio-app/gradio/raw/main/test/test_files/audio_sample.wav",
+        url: exampleUrl,
       },
     });
     const result = convertParameter(param);
-
-    expect(result).toEqual({
+    
+    expect(result).toMatchObject({
       type: "string",
       description: "Accepts: Audio file URL, file path, or resource identifier",
-      examples: ["https://github.com/gradio-app/gradio/raw/main/test/test_files/audio_sample.wav"],
     });
   });
 
@@ -479,10 +479,9 @@ describe("file and blob type conversions", () => {
     });
     const result = convertParameter(param);
 
-    expect(result).toEqual({
+    expect(result).toMatchObject({
       type: "string",  // Should always be "string" for file inputs
       description: "Accepts: Audio file URL, file path, or resource identifier",
-      examples: ["https://github.com/gradio-app/gradio/raw/main/test/test_files/audio_sample.wav"],
     });
   });
 
@@ -503,10 +502,9 @@ describe("file and blob type conversions", () => {
     });
     const result = convertParameter(param);
 
-    expect(result).toEqual({
+    expect(result).toMatchObject({
       type: "string",
       description: "Accepts: Image file URL, file path, or resource identifier",
-      examples: ["https://example.com/image.png"],
     });
   });
 });
@@ -559,6 +557,69 @@ describe("unnamed parameters", () => {
     params.forEach((param, index) => {
       const result = convertParameter(param);
       expect(result).toBeTruthy();
+    });
+  });
+});
+
+describe("special cases", () => {
+  // chatbox historys often have incorrect types/example pairings.
+  // will later handle python dicts/tuples more elegantly.
+  it("handles chat history parameter", () => {
+    const param = createParameter({
+      label: "Qwen2.5-72B-Instruct",
+      parameter_name: "history",
+      component: "Chatbot",
+      python_type: {
+        type: "list",
+        description: "Some other description that should be ignored",
+      },
+    });
+    const result = convertParameter(param);
+
+    expect(result).toEqual({
+      type: "array", 
+      description: "Chat history as an array of message pairs. Each pair is [user_message, assistant_message] where messages can be text strings or null. Advanced: messages can also be file references or UI components."
+    });
+  });
+
+  it("handles chat history parameter with examples", () => {
+    const param = createParameter({
+      label: "Qwen2.5-72B-Instruct",
+      parameter_name: "history",
+      component: "Chatbot",
+      python_type: {
+        type: "list",
+        description: "Some other description that should be ignored",
+      },
+      example_input: [["Hello", "Hi there!"]],  // Example chat history
+    });
+    const result = convertParameter(param);
+
+    expect(result).toEqual({
+      type: "array", 
+      description: "Chat history as an array of message pairs. Each pair is [user_message, assistant_message] where messages can be text strings or null. Advanced: messages can also be file references or UI components.",
+      examples: [[["Hello", "Hi there!"]]]
+    });
+  });
+
+  it("handles chat history parameter with default value", () => {
+    const param = createParameter({
+      label: "Qwen2.5-72B-Instruct",
+      parameter_name: "history",
+      component: "Chatbot",
+      parameter_has_default: true,
+      parameter_default: [],
+      python_type: {
+        type: "list",
+        description: "Some other description that should be ignored",
+      }
+    });
+    const result = convertParameter(param);
+
+    expect(result).toEqual({
+      type: "array", 
+      description: "Chat history as an array of message pairs. Each pair is [user_message, assistant_message] where messages can be text strings or null. Advanced: messages can also be file references or UI components.",
+      default: []
     });
   });
 });

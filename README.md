@@ -20,7 +20,9 @@ It's possible to run multiple server instances to use different working director
 
 ## File Handling and Claude Desktop Mode
 
-By default, the Server operates in _Claude Desktop Mode_. In this mode, Images are returned directly in the tool responses, while other binaries are saved in the working folder and a message is returned with the URI. This will usually give the best experience if using Claude Desktop as the client.
+By default, the Server operates in _Claude Desktop Mode_. In this mode, Images are returned directly in the tool responses, while other binaries are saved in the working folder and a message is returned with the path. This will usually give the best experience if using Claude Desktop as the client.
+
+URLs can also be supplied as inputs - the content gets passed to the Space.
 
 ### Example 1 - Image Generation (Download Image / Claude Vision)
 
@@ -33,6 +35,8 @@ We'll use `shuttleai/shuttle-3.1-aesthetic` to generate an image. The image gets
 We'll use `big-vision/paligemma-hf` to ask a question of an image. In this case, we specify the filename which is available in the Working Directory: we  don't want to upload the Image directly to Claude's context window. So, we can ask Claude:
 
 `paligemma to identify who is in the picture "bowie.jpg"` -> `Text Output: david bowie`
+
+Note that Claude fails this this test and PaliGemma passes it (this is from their example page).
 
 _If you are uploading something to Claude's context use the Paperclip Attachment button, otherwise specify the filename for the Server to send directly._
 
