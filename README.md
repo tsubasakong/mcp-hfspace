@@ -87,11 +87,7 @@ haoheliu/audioldm2-text2audio-text2music
 
 - merve/paligemma2-vqav2
 
-## Features
-
-### Claude Desktop Mode
-
-
+## Other Features
 
 ### Prompts
 
@@ -100,26 +96,6 @@ Prompts for each Space are generated, and provide an opportunity to input. Bear 
 ### Private Spaces
 
 Private Spaces are supported with a HuggingFace token. The Token is used to download and save content.
-
-## Development
-
-Install dependencies:
-
-```bash
-npm install
-```
-
-Build the server:#
-
-```bash
-npm run build
-```
-
-For development with auto-rebuild:
-
-```bash
-npm run watch
-```
 
 ## Installation
 
