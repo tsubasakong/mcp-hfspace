@@ -194,13 +194,23 @@ const imageConverter: ConverterFn = async (_component, value, spaceInfo) => {
   if (!value?.url) return null;
   try {
     const response = await convertUrlToBase64(value.url, value);
-    await saveFile(
-      response.arrayBuffer, 
-      response.mimeType, 
-      GradioComponentType.Image,
-      spaceInfo.spaceName, 
-      response.originalExtension
-    );
+    
+    // Try to save file but don't let failure stop processing
+    try {
+      await saveFile(
+        response.arrayBuffer, 
+        response.mimeType, 
+        GradioComponentType.Image,
+        spaceInfo.spaceName, 
+        response.originalExtension
+      );
+    } catch (saveError) {
+      if (config.claudeDesktopMode) {
+        console.error(`Failed to save image file: ${saveError instanceof Error ? saveError.message : String(saveError)}`);
+      } else {
+        throw saveError; // Re-throw if not in desktop mode
+      }
+    }
     
     return {
       type: "image",
