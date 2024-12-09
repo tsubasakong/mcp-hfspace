@@ -1,5 +1,7 @@
 # mcp-hfspace MCP Server 🤗
 
+Use NPX `@llmindset/mcp-hfspace` or download and build from here.
+
 Connect to [HuggingFace Spaces](https://huggingface.co/spaces)  with minimal setup needed - simply add your spaces and go!
 
 By default, it connects to `evalstate/FLUX.1-schnell` providing Image Generation capabilities to Claude Desktop.
