@@ -9,9 +9,11 @@ If no spaces are specified, it automatically connects to `evalstate/FLUX.1-schne
 Supply a list of HuggingFace spaces in the arguments. mcp-hfspace will find the most appropriate endpoint and automatically configure for usage. An example `claude_desktop_config.json` is supplied [below.](#installation)
 
 
-It is recommended to set a Working Directory for handling upload and download of images and other file-based content. Specify either the `--work-dir=/your_directory` argument or `MCP_HF_WORK_DIR` environment variable. 
+It is recommended to set a Working Directory for handling upload and download of images and other file-based content. Specify either the `--work-dir=/your_directory` argument or `MCP_HF_WORK_DIR` environment variable.
 
-By default the current working directory is used by default which for Claude on Windows is `\users\<username>\AppData\Roaming\Claude\<version.number\` and on MacOS is `TODO`.
+By default the current working directory is used for file upload/download. 
+
+By default, on Windows this is read/write folder at `\users\<username>\AppData\Roaming\Claude\<version.number\` and on MacOS is the root: `/`.
 
 To use private spaces, supply your Hugging Face Token with either the  `--hf-token=hf_...` argument or `HF_TOKEN` environment variable.
 
@@ -170,4 +172,6 @@ The Inspector will provide a URL to access debugging tools in your browser.
 
 ** HuggingFace Spaces**
 
-- If ZeroGPU quotas become an issue, try duplicating the space, make it private, use dedicated hardware and use HF_TOKEN to access. 
+- If ZeroGPU quotas or queues are too long, try duplicating the space. If your job takes less than sixty seconds, you can usually change the Python `@space[]` decorator to acquire less quota when running the job.
+- If you have a HuggingFace account, The Gradio API does not use your professional account 
+- If ZeroGPU quotas become an issue, try duplicating the space, make it private, use dedicated hardware and use HF_TOKEN to access.
