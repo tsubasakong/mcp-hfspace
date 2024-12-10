@@ -92,8 +92,9 @@ Some recommended spaces to try:
 - Qwen/Qwen2.5-72B-Instruct
 - prithivMLmods/Mistral-7B-Instruct-v0.3
 
-### Text-to-speech
+### Text-to-speech / Audio Generation
 
+- Sound-AI-SFX-predict
 - parler-tts/parler_tts
 
 ### Speech-to-text
@@ -110,6 +111,8 @@ Some recommended spaces to try:
 - microsoft/OmniParser
 - merve/paligemma2-vqav2
 - merve/paligemma-doc
+- DawnC/PawMatchAI 
+- DawnC/PawMatchAI/on_find_match_click - for interactive dog recommendations
 
 ## Other Features
 

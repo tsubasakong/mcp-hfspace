@@ -10,13 +10,18 @@ async function main() {
   const audioFile = process.argv[2];
 
   try {
-    const app = await Client.connect("hf-audio/whisper-large-v3", {
+    const app = await Client.connect("openai/whisper", {
       events: ["data", "status"],
     });
-
+    /*
     const submission = app.submit("/predict", {
       inputs: handle_file(audioFile),
     });
+*/
+    const submission = app.submit("/predict", [
+       handle_file(audioFile),
+       "transcribe"
+    ]);
 
     for await (const msg of submission) {
       if (msg.type === "status") {
@@ -25,6 +30,10 @@ async function main() {
       if (msg.type === "data") {
         console.log("Transcription:", msg.data);
         break; // Exit after getting the data
+      }
+
+      if (msg.stage === "error") {
+        throw new Error(`Gradio error: ${msg.message || "Unknown error"}`);
       }
     }
   } catch (error) {
