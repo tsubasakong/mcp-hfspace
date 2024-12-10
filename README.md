@@ -85,14 +85,12 @@ Some recommended spaces to try:
 
 - shuttleai/shuttle-3.1-aesthetic
 - black-forest-labs/FLUX.1-schnell
+- yanze/PuLID-FLUX
 
 ### Chat
 
 - Qwen/Qwen2.5-72B-Instruct
-
-### Image-to-Image
-
-- yanze/PuLID-FLUX
+- prithivMLmods/Mistral-7B-Instruct-v0.3
 
 ### Text-to-speech
 
@@ -101,6 +99,7 @@ Some recommended spaces to try:
 ### Speech-to-text
 
 - hf-audio/whisper-large-v3-turbo
+- (the openai models use unnamed parameters so will not work)
 
 ### Text-to-music
 
