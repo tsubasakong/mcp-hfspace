@@ -12,6 +12,13 @@
   "files": [
     "build"
   ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/evalstate/mcp-hfspace"
+  },
+  "bugs":{
+    "url": "https://github.com/evalstate/mcp-hfspace/issues"
+  },
   "scripts": {
     "prebuild": "node scripts/generate-version.js",
     "build": "tsc",
