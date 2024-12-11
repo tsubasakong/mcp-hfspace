@@ -96,6 +96,7 @@ Some recommended spaces to try:
 - shuttleai/shuttle-3.1-aesthetic
 - black-forest-labs/FLUX.1-schnell
 - yanze/PuLID-FLUX
+- Inspyrenet-Rembg (Background Removal)
 
 ### Chat
 
