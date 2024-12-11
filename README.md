@@ -130,6 +130,18 @@ Private Spaces are supported with a HuggingFace token. The Token is used to down
 
 ## Installation
 
+### Using mcp-get
+
+You can install this package using mcp-get:
+
+```bash
+npx @michaellatman/mcp-get@latest install @llmindset/mcp-hfspace
+```
+
+_Note - if you are using an old version of Windows PowerShell, you may need to run_ `Set-ExecutionPolicy Bypass -Scope Process` _before this command._
+
+### Using Claude Desktop
+
 To use with Claude Desktop, add the server config:
 
 On MacOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
