@@ -8,15 +8,25 @@ By default, it connects to `evalstate/FLUX.1-schnell` providing Image Generation
 
 ![Default Setup](./images/2024-12-09-flower.png)
 
-## Basic setup
+## Installation
 
-Supply a list of HuggingFace spaces in the arguments. mcp-hfspace will find the most appropriate endpoint and automatically configure for usage. An example `claude_desktop_config.json` is supplied [below.](#installation)
+### Using mcp-get
 
-By default the current working directory is used for file upload/download.
+You can install this package using mcp-get:
 
-On Windows this is a read/write folder at `\users\<username>\AppData\Roaming\Claude\<version.number\`, and on MacOS it is the is the read-only root: `/`.
+```bash
+npx @michaellatman/mcp-get@latest install @llmindset/mcp-hfspace
+```
 
-It is recommended to override this and set  a Working Directory for handling upload and download of images and other file-based content. Specify either the `--work-dir=/your_directory` argument or `MCP_HF_WORK_DIR` environment variable.
+_Note - if you are using an old version of Windows PowerShell, you may need to run_ `Set-ExecutionPolicy Bypass -Scope Process` _before this command._
+
+### Basic setup
+
+Supply a list of HuggingFace spaces in the arguments. mcp-hfspace will find the most appropriate endpoint and automatically configure it for usage. An example `claude_desktop_config.json` is supplied [below](#installation).
+
+By default the current working directory is used for file upload/download. On Windows this is a read/write folder at `\users\<username>\AppData\Roaming\Claude\<version.number\`, and on MacOS it is the is the read-only root: `/`.
+
+It is recommended to override this and set a Working Directory for handling the upload and download of images and other file-based content. Specify either the `--work-dir=/your_directory` argument or `MCP_HF_WORK_DIR` environment variable.
 
 To use private spaces, supply your Hugging Face Token with either the  `--hf-token=hf_...` argument or `HF_TOKEN` environment variable.
 
@@ -24,9 +34,9 @@ It's possible to run multiple server instances to use different working director
 
 ## File Handling and Claude Desktop Mode
 
-By default, the Server operates in _Claude Desktop Mode_. In this mode, Images are returned directly in the tool responses, while other binaries are saved in the working folder and a message is returned with the path. This will usually give the best experience if using Claude Desktop as the client.
+By default, the Server operates in _Claude Desktop Mode_. In this mode, Images are returned in the tool responses, while other binaries are saved in the working folder and a message is returned with the path. This will usually give the best experience if using Claude Desktop as the client.
 
-URLs can also be supplied as inputs - the content gets passed to the Space.
+URLs can also be supplied as inputs: the content gets passed to the Space.
 
 ### Example 1 - Image Generation (Download Image / Claude Vision)
 
@@ -47,7 +57,7 @@ We can also supply a URL. For example : `use paligemma to detect humans in https
 
 ### Example 3 - Text-to-Speech (Download Audio)
 
-In _Claude Desktop Mode_, the audio file is saved in the WORK_DIR, and Claude is notified of the creation. If not in desktop mode, the file is returned base64 encoded to the Client (useful if it supports embedded Audio attachments).
+In _Claude Desktop Mode_, the audio file is saved in the WORK_DIR, and Claude is notified of the creation. If not in desktop mode, the file is returned as a base64 encoded resource to the Client (useful if it supports embedded Audio attachments).
 
 ![Voice Production](./images/2024-12-08-mcp-parler.png)
 
@@ -59,7 +69,7 @@ Here, we use `hf-audio/whisper-large-v3-turbo` to transcribe some audio, and mak
 
 ### Example 5 - Image-to-Image
 
-In this example, we specify the filename for `microsoft/OmniParser` to use, and get returned an annotated Image and 2 separate pieces of text: descriptions and coordinates. The prompt used was `use omniparser to analyse ./screenshot.png` and `use the analysis to produce an artifact that reproduces that screen`.
+In this example, we specify the filename for `microsoft/OmniParser` to use, and get returned an annotated Image and 2 separate pieces of text: descriptions and coordinates. The prompt used was `use omniparser to analyse ./screenshot.png` and `use the analysis to produce an artifact that reproduces that screen`. `DawnC/Pawmatch` is also good at this.
 
 ![Omniparser and Artifact](./images/2024-12-08-mcp-omni-artifact.png)
 
@@ -126,19 +136,7 @@ A list of files in the WORK_DIR is returned, and as a convenience returns the na
 
 ### Private Spaces
 
-Private Spaces are supported with a HuggingFace token. The Token is used to download and save content.
-
-## Installation
-
-### Using mcp-get
-
-You can install this package using mcp-get:
-
-```bash
-npx @michaellatman/mcp-get@latest install @llmindset/mcp-hfspace
-```
-
-_Note - if you are using an old version of Windows PowerShell, you may need to run_ `Set-ExecutionPolicy Bypass -Scope Process` _before this command._
+Private Spaces are supported with a HuggingFace token. The Token is used to download and save generated content.
 
 ### Using Claude Desktop
 
@@ -176,12 +174,12 @@ On Windows: `%APPDATA%/Claude/claude_desktop_config.json`
 
 ### Claude Desktop
 
-- Claude Desktop 0.75 doesn't seem to respond to errors from the MCP Server, timing out instead. For persistent issues, use the MCP Inspector to get a better look at diagnosing what's going wrong. If something suddenly stops working, it's probably a quota issue.
-- Claude Desktop seems to use a hard timeout value of 60s, and doesn't seem to use Progress Notifications to manage UX alive. If you are using ZeroGPU spaces, large/heavy jobs may timeout. Check the WORK_DIR for results though; the MCP Server will still capture the result.
+- Claude Desktop 0.75 doesn't seem to respond to errors from the MCP Server, timing out instead. For persistent issues, use the MCP Inspector to get a better look at diagnosing what's going wrong. If something suddenly stops working, it's probably due to exhausting your HuggingFace ZeroGPU quota - try again after a short period, or set up your own Space for hosting.
+- Claude Desktop seems to use a hard timeout value of 60s, and doesn't appear  to use Progress Notifications to manage UX or keep-alive. If you are using ZeroGPU spaces, large/heavy jobs may timeout. Check the WORK_DIR for results though; the MCP Server will still capture and save the result if it was produced.
 - Claude Desktops reporting of Server Status, logging etc. isn't great - use [@modelcontextprotocol/inspector](https://github.com/modelcontextprotocol/inspector) to help diagnose issues.
 
 ### HuggingFace Spaces
 
-- If ZeroGPU quotas or queues are too long, try duplicating the space. If your job takes less than sixty seconds, you can usually change the decorate `@spaces.GPU(duration=20)` in `app.py` to request less quota when running the job.
+- If ZeroGPU quotas or queues are too long, try duplicating the space. If your job takes less than sixty seconds, you can usually change the function decorator `@spaces.GPU(duration=20)` in `app.py` to request less quota when running the job.
 - If you have a HuggingFace Pro account, please note that The Gradio API does not your additional quote for ZeroGPU jobs - you will need to set an `X-IP-Token` header to achieve that.
 - If you have a private space, and dedicated hardware your HF_TOKEN will give you direct access to that - no quota's apply. I recommend this if you are using for any kind of Production task.
