@@ -96,6 +96,7 @@ Some recommended spaces to try:
 - shuttleai/shuttle-3.1-aesthetic
 - black-forest-labs/FLUX.1-schnell
 - yanze/PuLID-FLUX
+- Inspyrenet-Rembg (Background Removal)
 
 ### Chat
 
@@ -104,7 +105,7 @@ Some recommended spaces to try:
 
 ### Text-to-speech / Audio Generation
 
-- Sound-AI-SFX-predict
+- fantaxy/Sound-AI-SFX
 - parler-tts/parler_tts
 
 ### Speech-to-text
