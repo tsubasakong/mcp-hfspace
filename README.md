@@ -1,4 +1,5 @@
 # mcp-hfspace MCP Server 🤗
+[![smithery badge](https://smithery.ai/badge/@llmindset/mcp-hfspace)](https://smithery.ai/protocol/@llmindset/mcp-hfspace)
 
 Use NPX `@llmindset/mcp-hfspace` or download and build from here.
 
@@ -7,6 +8,14 @@ Connect to [Hugging Face Spaces](https://huggingface.co/spaces)  with minimal se
 By default, it connects to `evalstate/FLUX.1-schnell` providing Image Generation capabilities to Claude Desktop.
 
 ![Default Setup](./images/2024-12-09-flower.png)
+
+### Installing via Smithery
+
+To install mcp-hfspace for Claude Desktop automatically via [Smithery](https://smithery.ai/protocol/@llmindset/mcp-hfspace):
+
+```bash
+npx @smithery/cli install @llmindset/mcp-hfspace --client claude
+```
 
 ## Installation
 
