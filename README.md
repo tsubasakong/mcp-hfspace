@@ -97,6 +97,7 @@ Some recommended spaces to try:
 - black-forest-labs/FLUX.1-schnell
 - yanze/PuLID-FLUX
 - Inspyrenet-Rembg (Background Removal)
+- diyism/Datou1111-shou_xin - [Beautiful Pencil Drawings](https://x.com/ClementDelangue/status/1867318931502895358) 
 
 ### Chat
 
