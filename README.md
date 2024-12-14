@@ -1,4 +1,5 @@
 # mcp-hfspace MCP Server 🤗
+[![smithery badge](https://smithery.ai/badge/@llmindset/mcp-hfspace)](https://smithery.ai/protocol/@llmindset/mcp-hfspace)
 
 Use NPX `@llmindset/mcp-hfspace` or download and build from here.
 
@@ -10,6 +11,8 @@ By default, it connects to `evalstate/FLUX.1-schnell` providing Image Generation
 
 ## Installation
 
+Recommend installation is using either mcp-get or Smithery - instructions below.
+
 ### Using mcp-get
 
 You can install this package using mcp-get:
@@ -19,6 +22,14 @@ npx @michaellatman/mcp-get@latest install @llmindset/mcp-hfspace
 ```
 
 _Note - if you are using an old version of Windows PowerShell, you may need to run_ `Set-ExecutionPolicy Bypass -Scope Process` _before this command._
+
+### Installing via Smithery
+
+To install mcp-hfspace for Claude Desktop automatically via [Smithery](https://smithery.ai/protocol/@llmindset/mcp-hfspace):
+
+```bash
+npx @smithery/cli install @llmindset/mcp-hfspace --client claude
+```
 
 ### Basic setup
 
