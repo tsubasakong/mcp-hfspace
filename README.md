@@ -9,15 +9,9 @@ By default, it connects to `evalstate/FLUX.1-schnell` providing Image Generation
 
 ![Default Setup](./images/2024-12-09-flower.png)
 
-### Installing via Smithery
-
-To install mcp-hfspace for Claude Desktop automatically via [Smithery](https://smithery.ai/protocol/@llmindset/mcp-hfspace):
-
-```bash
-npx @smithery/cli install @llmindset/mcp-hfspace --client claude
-```
-
 ## Installation
+
+Recommend installation is using either mcp-get or Smithery - instructions below.
 
 ### Using mcp-get
 
@@ -28,6 +22,14 @@ npx @michaellatman/mcp-get@latest install @llmindset/mcp-hfspace
 ```
 
 _Note - if you are using an old version of Windows PowerShell, you may need to run_ `Set-ExecutionPolicy Bypass -Scope Process` _before this command._
+
+### Installing via Smithery
+
+To install mcp-hfspace for Claude Desktop automatically via [Smithery](https://smithery.ai/protocol/@llmindset/mcp-hfspace):
+
+```bash
+npx @smithery/cli install @llmindset/mcp-hfspace --client claude
+```
 
 ### Basic setup
 
