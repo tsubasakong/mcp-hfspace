@@ -1,7 +1,7 @@
 # mcp-hfspace MCP Server 🤗
 [![smithery badge](https://smithery.ai/badge/@llmindset/mcp-hfspace)](https://smithery.ai/protocol/@llmindset/mcp-hfspace)
 
-Use NPX `@llmindset/mcp-hfspace` or download and build from here.
+Read the introduction here [llmindset.co.uk/resources/mcp-hfspace/](https://llmindset.co.uk/resources/mcp-hfspace/)
 
 Connect to [Hugging Face Spaces](https://huggingface.co/spaces)  with minimal setup needed - simply add your spaces and go!
 
