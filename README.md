@@ -9,6 +9,8 @@ By default, it connects to `evalstate/FLUX.1-schnell` providing Image Generation
 
 ![Default Setup](./images/2024-12-09-flower.png)
 
+<a href="https://glama.ai/mcp/servers/s57c80wvgq"><img width="380" height="200" src="https://glama.ai/mcp/servers/s57c80wvgq/badge" alt="mcp-hfspace MCP server" /></a>
+
 ## Installation
 
 Recommend installation is using either mcp-get or Smithery - instructions below.
