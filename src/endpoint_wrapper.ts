@@ -48,6 +48,8 @@ async function validateFilePath(filePath: string): Promise<boolean> {
   }
 }
 
+export type TargetEndpoint = { target: string | number };
+
 export class SpaceInfo {
   constructor(
     public readonly fullPath: string, // e.g. "parler-tts/parler_tts"
@@ -55,9 +57,9 @@ export class SpaceInfo {
     public readonly owner: string // e.g. "parler-tts"
   ) {}
 
-  getToolName(endpointName: string, anonIndex: number): string {
+  getToolName(endpointTarget: string | number): string {
     const name = `${this.spaceName}-${
-      anonIndex < 0 ? endpointName.slice(1) : endpointName
+      typeof endpointTarget === "string" ? endpointTarget.slice(1) : this.spaceName
     }`
       .replace(/[^a-zA-Z0-9_-]/g, "_")
       .slice(0, 64);
@@ -75,7 +77,7 @@ export class EndpointWrapper {
   private spaceInfo: SpaceInfo;
 
   constructor(
-    private endpointName: string,
+    private endpointTarget: string | number,
     private endpoint: ApiEndpoint,
     spacePath: string,
     private client: Client,
@@ -95,7 +97,7 @@ export class EndpointWrapper {
     }
 
     const spaceName = `${pathParts[0]}/${pathParts[1]}`;
-    const endpointName = pathParts[2] ? `/${pathParts[2]}` : undefined;
+    const endpointTarget = pathParts[2] ? `/${pathParts[2]}` : undefined;
 
     const preferredApis = [
       "/predict",
@@ -117,10 +119,10 @@ export class EndpointWrapper {
     const api = (await gradio.view_api()) as ApiStructure;
 
     // Try chosen API if specified
-    if (endpointName && api.named_endpoints[endpointName]) {
+    if (endpointTarget && api.named_endpoints[endpointTarget]) {
       return new EndpointWrapper(
-        endpointName,
-        api.named_endpoints[endpointName],
+        endpointTarget,
+        api.named_endpoints[endpointTarget],
         spaceName,
         gradio
       );
@@ -172,11 +174,11 @@ export class EndpointWrapper {
   /* Endpoint Wrapper */
 
   private getSpaceDisplayName(): string {
-    return `${this.spaceInfo.fullPath} endpoint ${this.endpointName}`;
+    return `${this.spaceInfo.fullPath} endpoint ${this.endpointTarget}`;
   }
 
   get toolName() {
-    return this.spaceInfo.getToolName(this.endpointName, this.anonIndex);
+    return this.spaceInfo.getToolName(this.endpointTarget);
   }
 
   toolDefinition() {
@@ -230,7 +232,7 @@ export class EndpointWrapper {
       let submission: any;
 
       submission = this.client.submit(
-        this.anonIndex < 0 ? this.endpointName : this.anonIndex,
+        this.endpointTarget,
         parameters
       );
 
