@@ -40,7 +40,7 @@ const config = parseConfig();
 process.chdir(config.workDir);
 
 // Create a map to store endpoints by their tool names
-const endpoints = new Map();
+const endpoints = new Map<string, EndpointWrapper>();
 
 for (const spacePath of config.spacePaths) {
   try {

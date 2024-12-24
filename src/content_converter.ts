@@ -8,7 +8,7 @@ import * as fs from "fs/promises";
 import { pathToFileURL } from "url";
 import path from "path";
 import { config } from "./config.js";
-import { SpaceInfo } from "./endpoint_wrapper.js";
+import { EndpointPath } from "./endpoint_wrapper.js";
 
 // Add types for Gradio component values
 interface GradioResourceValue {
@@ -36,14 +36,14 @@ interface ResourceResponse {
 type ContentConverter = (
   component: ApiReturn,
   value: GradioResourceValue,
-  spaceInfo: SpaceInfo
+  endpointPath: EndpointPath
 ) => Promise<TextContent | ImageContent | EmbeddedResource>;
 
 // Type for converter functions that may not succeed
 type ConverterFn = (
   component: ApiReturn,
   value: GradioResourceValue,
-  spaceInfo: SpaceInfo
+  endpointPath: EndpointPath
 ) => Promise<TextContent | ImageContent | EmbeddedResource | null>;
 // Default converter implementation
 const defaultConverter: ConverterFn = async () => null;
@@ -58,15 +58,15 @@ export class GradioConverter {
   static async convert(
     component: ApiReturn,
     value: GradioResourceValue,
-    spaceInfo: SpaceInfo
+    endpointPath: EndpointPath
   ): Promise<TextContent | ImageContent | EmbeddedResource> {
     if (config.debug) {
-      await fs.writeFile(generateFilename("debug","json",spaceInfo.spaceName), JSON.stringify(value,null,2));
+      await fs.writeFile(generateFilename("debug","json",endpointPath.mcpToolName), JSON.stringify(value,null,2));
     }
     const converter =
       this.converters.get(component.component) ||
       withFallback(defaultConverter);
-    return converter(component, value, spaceInfo);
+    return converter(component, value, endpointPath);
   }
 }
 
@@ -82,8 +82,8 @@ const createTextContent = (component: ApiReturn, value: any): TextContent => {
 
 // Wrapper that adds fallback behavior
 const withFallback = (converter: ConverterFn): ContentConverter => {
-  return async (component: ApiReturn, value: GradioResourceValue, spaceInfo: SpaceInfo) => {
-    const result = await converter(component, value, spaceInfo);
+  return async (component: ApiReturn, value: GradioResourceValue, endpointPath: EndpointPath) => {
+    const result = await converter(component, value, endpointPath);
     return result ?? createTextContent(component, value);
   };
 };
@@ -92,12 +92,11 @@ const withFallback = (converter: ConverterFn): ContentConverter => {
 const generateFilename = (
   prefix: string,
   extension: string,
-  spaceName: string
+  mcpToolName: string
 ): string => {
   const date = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
   const randomId = crypto.randomUUID().slice(0, 5); // First 5 chars
-  const safeSpaceName = spaceName.replace(/[^a-zA-Z0-9_-]/g, "_");
-  return `${date}_${safeSpaceName}_${prefix}_${randomId}.${extension}`;
+  return `${date}_${mcpToolName}_${prefix}_${randomId}.${extension}`;
 };
 
 const getExtensionFromFilename = (url: string): string | null => {
@@ -177,11 +176,11 @@ const saveFile = async (
   arrayBuffer: ArrayBuffer,
   mimeType: string,
   prefix: string,
-  spaceName: string,
+  mcpToolName: string,
   originalExtension?: string | null
 ): Promise<string> => {
   const extension = originalExtension || mimeType.split("/")[1] || "bin";
-  const filename = generateFilename(prefix, extension, spaceName);
+  const filename = generateFilename(prefix, extension, mcpToolName);
   await fs.writeFile(filename, Buffer.from(arrayBuffer), {
     encoding: "binary",
   });
@@ -190,7 +189,7 @@ const saveFile = async (
 };
 
 // Update converters to use space information
-const imageConverter: ConverterFn = async (_component, value, spaceInfo) => {
+const imageConverter: ConverterFn = async (_component, value, endpointPath) => {
   if (!value?.url) return null;
   try {
     const response = await convertUrlToBase64(value.url, value);
@@ -201,7 +200,7 @@ const imageConverter: ConverterFn = async (_component, value, spaceInfo) => {
         response.arrayBuffer, 
         response.mimeType, 
         GradioComponentType.Image,
-        spaceInfo.spaceName, 
+        endpointPath.mcpToolName, 
         response.originalExtension
       );
     } catch (saveError) {
@@ -223,7 +222,7 @@ const imageConverter: ConverterFn = async (_component, value, spaceInfo) => {
   }
 };
 
-const audioConverter: ConverterFn = async (_component, value, spaceInfo) => {
+const audioConverter: ConverterFn = async (_component, value, endpointPath) => {
   if (!value?.url) return null;
   try {
     const { mimeType, base64Data, arrayBuffer, originalExtension } = await convertUrlToBase64(
@@ -234,7 +233,7 @@ const audioConverter: ConverterFn = async (_component, value, spaceInfo) => {
       arrayBuffer,
       mimeType,
       "audio",
-      spaceInfo.spaceName,
+      endpointPath.mcpToolName,
       originalExtension
     );
 
