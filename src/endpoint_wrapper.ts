@@ -48,51 +48,60 @@ async function validateFilePath(filePath: string): Promise<boolean> {
   }
 }
 
-export type TargetEndpoint = { target: string | number };
+export interface EndpointPath {
+  owner: string;
+  space: string;
+  endpoint: string | number;
+  mcpToolName: string;
+  mcpDisplayName: string;
+}
 
-export class SpaceInfo {
-  constructor(
-    public readonly fullPath: string, // e.g. "parler-tts/parler_tts"
-    public readonly spaceName: string, // e.g. "parler_tts"
-    public readonly owner: string // e.g. "parler-tts"
-  ) {}
+export function endpointSpecified(path: string) {
+  const parts = path.replace(/^\//, "").split("/");
+  return parts.length === 3;
+}
 
-  getToolName(endpointTarget: string | number): string {
-    const name = `${this.spaceName}-${
-      typeof endpointTarget === "string" ? endpointTarget.slice(1) : this.spaceName
-    }`
-      .replace(/[^a-zA-Z0-9_-]/g, "_")
-      .slice(0, 64);
-    return name || "unnamed_tool";
+export function parsePath(path: string): EndpointPath {
+  const parts = path.replace(/^\//, "").split("/");
+
+  if (parts.length != 3) {
+    throw new Error(
+      `Invalid Endpoint path format [${path}]. Use or vendor/space/endpoint`
+    );
   }
 
-  static fromPath(spacePath: string): SpaceInfo {
-    const [owner, name] = spacePath.split("/");
-    return new SpaceInfo(spacePath, name, owner);
+  const [owner, space, rawEndpoint] = parts;
+  return {
+    owner,
+    space,
+    endpoint: `/${rawEndpoint}`,
+    mcpToolName: formatMcpToolName(space, rawEndpoint),
+    mcpDisplayName: formatMcpDisplayName(space, rawEndpoint),
+  };
+
+  function formatMcpToolName(space: string, endpoint: string | number) {
+    return `${space}-${endpoint}`.replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 64);
+  }
+
+  function formatMcpDisplayName(space: string, endpoint: string | number) {
+    return `${space} endpoint /${endpoint}`;
   }
 }
 
 export class EndpointWrapper {
-  private anonIndex: number;
-  private spaceInfo: SpaceInfo;
-
   constructor(
-    private endpointTarget: string | number,
+    private endpointPath: EndpointPath,
     private endpoint: ApiEndpoint,
-    spacePath: string,
-    private client: Client,
-    anonIndex = -1
-  ) {
-    this.spaceInfo = SpaceInfo.fromPath(spacePath);
-    this.anonIndex = anonIndex;
-  }
+    private client: Client
+  ) {}
 
-  static async createEndpoint(spacePath: string): Promise<EndpointWrapper> {
-    const pathParts = spacePath.split("/");
-
+  static async createEndpoint(
+    configuredPath: string
+  ): Promise<EndpointWrapper> {
+    const pathParts = configuredPath.split("/");
     if (pathParts.length < 2 || pathParts.length > 3) {
       throw new Error(
-        `Invalid space path format [${spacePath}]. Use: vendor/space or vendor/space/endpoint`
+        `Invalid space path format [${configuredPath}]. Use: vendor/space or vendor/space/endpoint`
       );
     }
 
@@ -121,9 +130,8 @@ export class EndpointWrapper {
     // Try chosen API if specified
     if (endpointTarget && api.named_endpoints[endpointTarget]) {
       return new EndpointWrapper(
-        endpointTarget,
+        parsePath(configuredPath),
         api.named_endpoints[endpointTarget],
-        spaceName,
         gradio
       );
     }
@@ -134,9 +142,8 @@ export class EndpointWrapper {
     );
     if (preferredApi) {
       return new EndpointWrapper(
-        preferredApi,
+        parsePath(`${configuredPath}${preferredApi}`),
         api.named_endpoints[preferredApi],
-        spaceName,
         gradio
       );
     }
@@ -145,9 +152,8 @@ export class EndpointWrapper {
     const firstNamed = Object.entries(api.named_endpoints)[0];
     if (firstNamed) {
       return new EndpointWrapper(
-        firstNamed[0],
+        parsePath(`${configuredPath}${firstNamed[0]}`),
         firstNamed[1],
-        spaceName,
         gradio
       );
     }
@@ -160,31 +166,28 @@ export class EndpointWrapper {
 
     if (validUnnamed) {
       return new EndpointWrapper(
-        spaceName.split("/")[1],
+        parsePath(`${configuredPath}/${validUnnamed[0]}`),
         validUnnamed[1],
-        spaceName,
-        gradio,
-        parseInt(validUnnamed[0])
+        gradio
       );
     }
 
-    throw new Error(`No valid endpoints found for ${spacePath}`);
+    throw new Error(`No valid endpoints found for ${configuredPath}`);
   }
 
   /* Endpoint Wrapper */
-
-  private getSpaceDisplayName(): string {
-    return `${this.spaceInfo.fullPath} endpoint ${this.endpointTarget}`;
+  private mcpDescriptionName(): string {
+    return this.endpointPath.mcpDisplayName;
   }
 
-  get toolName() {
-    return this.spaceInfo.getToolName(this.endpointTarget);
+  get mcpToolName() {
+    return this.endpointPath.mcpToolName;
   }
 
   toolDefinition() {
     return {
-      name: this.toolName,
-      description: `Call the ${this.getSpaceDisplayName()}`,
+      name: this.mcpToolName,
+      description: `Call the ${this.mcpDescriptionName()}`,
       inputSchema: convertApiToSchema(this.endpoint),
     };
   }
@@ -231,10 +234,7 @@ export class EndpointWrapper {
       let result: any;
       let submission: any;
 
-      submission = this.client.submit(
-        this.endpointTarget,
-        parameters
-      );
+      submission = this.client.submit(this.endpointPath.endpoint, parameters);
 
       const progressNotifier = createProgressNotifier(server);
 
@@ -256,7 +256,7 @@ export class EndpointWrapper {
       return await this.convertPredictResults(
         this.endpoint.returns,
         result,
-        this.spaceInfo
+        this.endpointPath
       );
     } catch (error) {
       const errorMessage =
@@ -268,13 +268,17 @@ export class EndpointWrapper {
   private async convertPredictResults(
     returns: ApiReturn[],
     predictResults: any[],
-    spaceInfo: SpaceInfo
+    endpointPath: EndpointPath
   ): Promise<CallToolResult> {
     const content: (TextContent | ImageContent | EmbeddedResource)[] = [];
 
     for (const [index, output] of returns.entries()) {
       const value = predictResults[index];
-      const converted = await GradioConverter.convert(output, value, spaceInfo);
+      const converted = await GradioConverter.convert(
+        output,
+        value,
+        endpointPath
+      );
       content.push(converted);
     }
 
@@ -284,20 +288,15 @@ export class EndpointWrapper {
     };
   }
 
-  getSpaceInfo(): SpaceInfo {
-    return this.spaceInfo;
-  }
-
   promptName() {
-    // Use the same name as the tool for consistency
-    return this.toolName;
+    return this.mcpToolName;
   }
 
   promptDefinition() {
     const schema = convertApiToSchema(this.endpoint);
     return {
       name: this.promptName(),
-      description: `Use the ${this.getSpaceDisplayName()}.`,
+      description: `Use the ${this.mcpDescriptionName()}.`,
       arguments: Object.entries(schema.properties).map(
         ([name, prop]: [string, any]) => ({
           name,
@@ -312,7 +311,7 @@ export class EndpointWrapper {
     args?: Record<string, string>
   ): Promise<GetPromptResult> {
     const schema = convertApiToSchema(this.endpoint);
-    let promptText = `Using the ${this.getSpaceDisplayName()}:\n\n`;
+    let promptText = `Using the ${this.mcpDescriptionName()}:\n\n`;
 
     promptText += Object.entries(schema.properties)
       .map(([name, prop]: [string, any]) => {
