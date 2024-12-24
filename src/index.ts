@@ -148,10 +148,7 @@ server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
       }
     ]
   }
-    
-    
 });
-
 
 /**
  * Start the server using stdio transport.
