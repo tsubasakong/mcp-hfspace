@@ -18,13 +18,14 @@ import {
   ReadResourceRequestSchema,
   ResourceContentsSchema,
 } from "@modelcontextprotocol/sdk/types.js";
-import { promises as fs } from "fs";
+import { Dirent, promises as fs } from "fs";
 import path, { join } from "path";
 
 import { EndpointWrapper } from "./endpoint_wrapper.js";
 import { parseConfig } from "./config.js";
 
 const MAX_RESOURCE_SIZE = 1024 * 1024 * 2; // 2MB
+const AVAILABLE_RESOURCES = "Available Resources";
 
 // Create MCP server
 const server = new Server(
@@ -103,14 +104,26 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
 server.setRequestHandler(ListPromptsRequestSchema, async () => {
   return {
-    prompts: Array.from(endpoints.values()).map((endpoint) =>
-      endpoint.promptDefinition()
-    ),
+    prompts: [
+      {
+        name: AVAILABLE_RESOURCES,
+        description: "List of available resources.",
+        arguments: [],
+      },
+      ...Array.from(endpoints.values()).map((endpoint) =>
+        endpoint.promptDefinition()
+      ),
+    ],
   };
 });
 
 server.setRequestHandler(GetPromptRequestSchema, async (request) => {
   const promptName = request.params.name;
+
+  if (AVAILABLE_RESOURCES === promptName) {
+    return availableResourcesPrompt();
+  }
+
   const endpoint = endpoints.get(promptName);
 
   if (!endpoint) {
@@ -120,6 +133,62 @@ server.setRequestHandler(GetPromptRequestSchema, async (request) => {
   return await endpoint.getPromptTemplate(request.params.arguments);
 });
 
+function fileToUri(file: Dirent) {
+  const fullPath = path.join(file.parentPath || "", file.name);
+  const relativePath = path
+    .relative(config.workDir, fullPath)
+    .replace(/\\/g, "/"); // ensure forward slashes
+
+  // Create proper file URI
+  return `file:./${relativePath}`;
+}
+
+async function availableResourcesPrompt() {
+  const files = await fs.readdir(config.workDir, {
+    withFileTypes: true,
+    recursive: true,
+  });
+
+  const fileList = files
+    .filter((entry) => entry.isFile())
+    .map((entry) => {
+      const fileUri = fileToUri(entry);
+
+      // Get MIME type with fallback
+      const mimeType = mime.getType(entry.name) || FALLBACK_MIME_TYPE;
+
+      return {
+        uri: fileUri,
+        name: entry.name,
+        mimeType,
+      };
+    })
+    .map(({ uri, name, mimeType }) => `| ${uri} | ${name} | ${mimeType} |`);
+
+  const content =
+    fileList.length == 0
+      ? { type: "text", text: "No resources available." }
+      : {
+          type: "text",
+          text: `
+    The following resources are available for tool calls:
+| Resource URI | Name | MIME Type |
+|--------------|----- |-----------|
+${fileList.join("\n")}
+    
+Prefer using the Resource URI for tool parameters which require a file input. URLs are also accepted.`.trim(),
+        };
+
+  return {
+    messages: [
+      {
+        role: "user",
+        content: content,
+      },
+    ],
+  };
+}
+
 server.setRequestHandler(ListResourcesRequestSchema, async () => {
   try {
     const files = await fs.readdir(config.workDir, {
@@ -128,19 +197,19 @@ server.setRequestHandler(ListResourcesRequestSchema, async () => {
     });
     const supportedFiles = await Promise.all(
       files.map(async (entry) => ({
-      entry,
-      isSupported: entry.isFile() && await supported(entry.name)
+        entry,
+        isSupported: entry.isFile() && (await supported(entry.name)),
       }))
     );
 
     return {
       resources: supportedFiles
-      .filter(({ isSupported }) => isSupported)
-      .map(({ entry }) => ({
-        uri: `file://./${entry.name}`,
-        name: `./${entry.name}`,
-        mimetype: mime.getType(entry.name) || FALLBACK_MIME_TYPE,
-      })),
+        .filter(({ isSupported }) => isSupported)
+        .map(({ entry }) => ({
+          uri: fileToUri(entry),
+          name: `${entry.name}`,
+          mimetype: mime.getType(entry.name) || FALLBACK_MIME_TYPE,
+        })),
     };
   } catch (error) {
     if (error instanceof Error) {
@@ -155,9 +224,6 @@ async function supported(filename: string) {
   // Check file size before deciding if it's supported
   try {
     const stats = await fs.stat(filename);
-    console.error(
-      `${filename} -- ${stats.size} -- ${stats.size > MAX_RESOURCE_SIZE}`
-    );
     if (stats.size > MAX_RESOURCE_SIZE) return false;
   } catch (error) {
     return false;

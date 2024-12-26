@@ -21,14 +21,19 @@ import type { StatusMessage, Payload } from "@gradio/client";
 
 type GradioEvent = StatusMessage | Payload;
 
-async function validateFilePath(filePath: string): Promise<boolean> {
-  // Skip URLs
-  if (filePath.startsWith("http://") || filePath.startsWith("https://")) {
-    return true;
-  }
-
+async function validatePath(filePath: string): Promise<string> {
   try {
-    // Normalize paths and check if within CWD
+    // Early return for http/https URLs
+    if (filePath.startsWith("http://") || filePath.startsWith("https://")) {
+      return filePath; // Pass through unchanged
+    }
+
+    // Handle file:// and file:./ URIs
+    if (filePath.startsWith("file:")) {
+      filePath = filePath.replace(/^file:(?:\/\/|\.\/)/, "");
+    }
+
+    // Rest of function unchanged - normal path processing
     const normalizedFilePath = path.normalize(path.resolve(filePath));
     const normalizedCwd = path.normalize(process.cwd());
 
@@ -38,7 +43,7 @@ async function validateFilePath(filePath: string): Promise<boolean> {
 
     // Check if file exists
     await fs.access(normalizedFilePath);
-    return true;
+    return normalizedFilePath;
   } catch (error) {
     if (error instanceof Error) {
       throw new Error(
@@ -49,7 +54,6 @@ async function validateFilePath(filePath: string): Promise<boolean> {
     }
   }
 }
-
 export interface EndpointPath {
   owner: string;
   space: string;
@@ -76,7 +80,9 @@ export function parsePath(path: string): EndpointPath {
   return {
     owner,
     space,
-    endpoint: isNaN(Number(rawEndpoint)) ? `/${rawEndpoint}` : parseInt(rawEndpoint),
+    endpoint: isNaN(Number(rawEndpoint))
+      ? `/${rawEndpoint}`
+      : parseInt(rawEndpoint),
     mcpToolName: formatMcpToolName(space, rawEndpoint),
     mcpDisplayName: formatMcpDisplayName(space, rawEndpoint),
   };
@@ -123,13 +129,16 @@ export class EndpointWrapper {
       "/add_text",
     ];
 
-    const gradio : Client = await Client.connect(spaceName, {
+    const gradio: Client = await Client.connect(spaceName, {
       events: ["data", "status"],
       hf_token: config.hfToken,
     });
     const api = (await gradio.view_api()) as ApiStructure;
-    if(config.debug){
-      await fs.writeFile(`${pathParts[0]}_${pathParts[1]}_debug_api.json`, JSON.stringify(api,null,2));
+    if (config.debug) {
+      await fs.writeFile(
+        `${pathParts[0]}_${pathParts[1]}_debug_api.json`,
+        JSON.stringify(api, null, 2)
+      );
     }
     // Try chosen API if specified
     if (endpointTarget && api.named_endpoints[endpointTarget]) {
@@ -216,8 +225,8 @@ export class EndpointWrapper {
         (p) => p.parameter_name === key || p.label === key
       );
       if (param && isFileParameter(param) && typeof value === "string") {
-        await validateFilePath(value);
-        parameters[key] = handle_file(value);
+        const file = await validatePath(value);
+        parameters[key] = handle_file(file);
       }
     }
 
@@ -237,15 +246,19 @@ export class EndpointWrapper {
     let events = [];
     try {
       let result;
-      const submission : AsyncIterable<GradioEvent>  = this.client.submit(this.endpointPath.endpoint, parameters) as AsyncIterable<GradioEvent>;
+      const submission: AsyncIterable<GradioEvent> = this.client.submit(
+        this.endpointPath.endpoint,
+        parameters
+      ) as AsyncIterable<GradioEvent>;
       const progressNotifier = createProgressNotifier(server);
       for await (const msg of submission) {
-        if(config.debug) events.push(msg);
+        if (config.debug) events.push(msg);
         if (msg.type === "data") {
-
-          if(Array.isArray(msg.data)){
-            const hasContent = msg.data.some((item:unknown) => typeof item !== 'object');
-            if(hasContent) result = msg.data;
+          if (Array.isArray(msg.data)) {
+            const hasContent = msg.data.some(
+              (item: unknown) => typeof item !== "object"
+            );
+            if (hasContent) result = msg.data;
           }
         } else if (msg.type === "status") {
           if (msg.stage === "error") {
@@ -269,8 +282,13 @@ export class EndpointWrapper {
         error instanceof Error ? error.message : String(error);
       throw new Error(`Error calling endpoint: ${errorMessage}`);
     } finally {
-      if(config.debug&&events.length>0){
-        await fs.writeFile(`${this.mcpToolName}_status_${crypto.randomUUID().substring(0,5)}.json`,JSON.stringify(events,null,2));
+      if (config.debug && events.length > 0) {
+        await fs.writeFile(
+          `${this.mcpToolName}_status_${crypto
+            .randomUUID()
+            .substring(0, 5)}.json`,
+          JSON.stringify(events, null, 2)
+        );
       }
     }
   }

@@ -184,7 +184,6 @@ const saveFile = async (
   await fs.writeFile(filename, Buffer.from(arrayBuffer), {
     encoding: "binary",
   });
-  console.error(`Saved ${prefix} to ${filename}`);
   return filename;
 };
 
