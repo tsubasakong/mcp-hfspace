@@ -47,9 +47,11 @@ It's possible to run multiple server instances to use different working director
 
 ## File Handling and Claude Desktop Mode
 
-By default, the Server operates in _Claude Desktop Mode_. In this mode, Images are returned in the tool responses, while other binaries are saved in the working folder and a message is returned with the path. This will usually give the best experience if using Claude Desktop as the client.
+By default, the Server operates in _Claude Desktop Mode_. In this mode, Images are returned in the tool responses, while other files are saved in the working folder, their file path is returned as a message. This will usually give the best experience if using Claude Desktop as the client.
 
 URLs can also be supplied as inputs: the content gets passed to the Space.
+
+There is an "Available Resources" prompt that gives Claude the available files and mime types from your working directory. This is currently the best way to manage files.
 
 ### Example 1 - Image Generation (Download Image / Claude Vision)
 
