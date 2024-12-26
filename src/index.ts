@@ -113,22 +113,17 @@ server.setRequestHandler(GetPromptRequestSchema, async (request) => {
 
 server.setRequestHandler(ListResourcesRequestSchema, async () => {
   try {
-    const files = await fs.readdir(config.workDir);
-    const resources = [];
-    
-    for (const file of files) {
-      const fullPath = join(config.workDir, file);
-      const stats = await fs.lstat(fullPath);
-      
-      if (stats.isFile()) {
-        resources.push({
-          uri: `file://./${file}`,
-          name: `File: ${file}`,
-        });
-      }
-    }
-    
-    return { resources };
+    const files = await fs.readdir(config.workDir, { withFileTypes: true });
+    return {
+      resources: files
+        .filter((entry) => entry.isFile())
+        .map<{uri: string, name:string}>((file) => {
+          return {
+            uri: `file://./${file.name}`,
+            name: `./${file.name}`,
+          };
+        })
+    };
   } catch (error) {
     if (error instanceof Error) {
       throw new Error(`Failed to list resources: ${error.message}`);
@@ -144,10 +139,10 @@ server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
       {
         uri: request.params.uri,
         text: `Use the file "${request.params.uri}"`,
-        mimetype: `text/plain`
-      }
-    ]
-  }
+        mimetype: `text/plain`,
+      },
+    ],
+  };
 });
 
 /**

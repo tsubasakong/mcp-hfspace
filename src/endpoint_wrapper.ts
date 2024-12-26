@@ -1,5 +1,4 @@
-import { Client } from "@gradio/client";
-import { handle_file } from "@gradio/client";
+import { Client, handle_file } from "@gradio/client";
 import { ApiStructure, ApiEndpoint, ApiReturn } from "./gradio_api.js";
 import { convertApiToSchema, isFileParameter } from "./gradio_convert.js";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
@@ -18,6 +17,9 @@ import { createProgressNotifier } from "./progress_notifier.js";
 import { GradioConverter } from "./content_converter.js";
 import { config } from "./config.js";
 import * as path from "path";
+import type { StatusMessage, Payload } from "@gradio/client";
+
+type GradioEvent = StatusMessage | Payload;
 
 async function validateFilePath(filePath: string): Promise<boolean> {
   // Skip URLs
@@ -74,7 +76,7 @@ export function parsePath(path: string): EndpointPath {
   return {
     owner,
     space,
-    endpoint: `/${rawEndpoint}`,
+    endpoint: isNaN(Number(rawEndpoint)) ? `/${rawEndpoint}` : parseInt(rawEndpoint),
     mcpToolName: formatMcpToolName(space, rawEndpoint),
     mcpDisplayName: formatMcpDisplayName(space, rawEndpoint),
   };
@@ -121,12 +123,14 @@ export class EndpointWrapper {
       "/add_text",
     ];
 
-    const gradio = await Client.connect(spaceName, {
+    const gradio : Client = await Client.connect(spaceName, {
       events: ["data", "status"],
       hf_token: config.hfToken,
     });
     const api = (await gradio.view_api()) as ApiStructure;
-
+    if(config.debug){
+      await fs.writeFile(`${pathParts[0]}_${pathParts[1]}_debug_api.json`, JSON.stringify(api,null,2));
+    }
     // Try chosen API if specified
     if (endpointTarget && api.named_endpoints[endpointTarget]) {
       return new EndpointWrapper(
@@ -226,21 +230,24 @@ export class EndpointWrapper {
   }
 
   async handleToolCall(
-    parameters: Record<string, any>,
+    parameters: Record<string, unknown>,
     progressToken: string | undefined,
     server: Server
   ): Promise<CallToolResult> {
+    let events = [];
     try {
-      let result: any;
-      let submission: any;
-
-      submission = this.client.submit(this.endpointPath.endpoint, parameters);
-
+      let result;
+      const submission : AsyncIterable<GradioEvent>  = this.client.submit(this.endpointPath.endpoint, parameters) as AsyncIterable<GradioEvent>;
       const progressNotifier = createProgressNotifier(server);
-
       for await (const msg of submission) {
+        if(config.debug) events.push(msg);
         if (msg.type === "data") {
-          result = msg.data;
+          if(Array.isArray(msg.data)){
+            const content = msg.data.filter((item: unknown): item is string => typeof item === "string");
+            if(content.length > 0){
+              result = content;
+            }
+          }
         } else if (msg.type === "status" && progressToken) {
           if (msg.stage === "error") {
             throw new Error(`Gradio error: ${msg.message || "Unknown error"}`);
@@ -262,6 +269,10 @@ export class EndpointWrapper {
       const errorMessage =
         error instanceof Error ? error.message : String(error);
       throw new Error(`Error calling endpoint: ${errorMessage}`);
+    } finally {
+      if(config.debug&&events.length>0){
+        await fs.writeFile(`${this.mcpToolName}_status_${crypto.randomUUID().substring(0,5)}.json`,JSON.stringify(events,null,2));
+      }
     }
   }
 
