@@ -242,17 +242,16 @@ export class EndpointWrapper {
       for await (const msg of submission) {
         if(config.debug) events.push(msg);
         if (msg.type === "data") {
+
           if(Array.isArray(msg.data)){
-            const content = msg.data.filter((item: unknown): item is string => typeof item === "string");
-            if(content.length > 0){
-              result = content;
-            }
+            const hasContent = msg.data.some((item:unknown) => typeof item !== 'object');
+            if(hasContent) result = msg.data;
           }
-        } else if (msg.type === "status" && progressToken) {
+        } else if (msg.type === "status") {
           if (msg.stage === "error") {
             throw new Error(`Gradio error: ${msg.message || "Unknown error"}`);
           }
-          await progressNotifier.notify(msg, progressToken);
+          if (progressToken) await progressNotifier.notify(msg, progressToken);
         }
       }
 

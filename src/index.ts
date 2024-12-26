@@ -3,6 +3,12 @@
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { VERSION } from "./version.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import mime from "mime";
+import {
+  treatAsText,
+  claudeSupportedMimeTypes,
+  FALLBACK_MIME_TYPE,
+} from "./mime_types.js";
 import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
@@ -10,12 +16,15 @@ import {
   GetPromptRequestSchema,
   ListResourcesRequestSchema,
   ReadResourceRequestSchema,
+  ResourceContentsSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 import { promises as fs } from "fs";
-import { join } from "path";
+import path, { join } from "path";
 
 import { EndpointWrapper } from "./endpoint_wrapper.js";
 import { parseConfig } from "./config.js";
+
+const MAX_RESOURCE_SIZE = 1024 * 1024 * 2; // 2MB
 
 // Create MCP server
 const server = new Server(
@@ -113,16 +122,25 @@ server.setRequestHandler(GetPromptRequestSchema, async (request) => {
 
 server.setRequestHandler(ListResourcesRequestSchema, async () => {
   try {
-    const files = await fs.readdir(config.workDir, { withFileTypes: true });
+    const files = await fs.readdir(config.workDir, {
+      withFileTypes: true,
+      recursive: true,
+    });
+    const supportedFiles = await Promise.all(
+      files.map(async (entry) => ({
+      entry,
+      isSupported: entry.isFile() && await supported(entry.name)
+      }))
+    );
+
     return {
-      resources: files
-        .filter((entry) => entry.isFile())
-        .map<{uri: string, name:string}>((file) => {
-          return {
-            uri: `file://./${file.name}`,
-            name: `./${file.name}`,
-          };
-        })
+      resources: supportedFiles
+      .filter(({ isSupported }) => isSupported)
+      .map(({ entry }) => ({
+        uri: `file://./${entry.name}`,
+        name: `./${entry.name}`,
+        mimetype: mime.getType(entry.name) || FALLBACK_MIME_TYPE,
+      })),
     };
   } catch (error) {
     if (error instanceof Error) {
@@ -132,14 +150,45 @@ server.setRequestHandler(ListResourcesRequestSchema, async () => {
   }
 });
 
+async function supported(filename: string) {
+  if (!config.claudeDesktopMode) return true;
+  // Check file size before deciding if it's supported
+  try {
+    const stats = await fs.stat(filename);
+    console.error(
+      `${filename} -- ${stats.size} -- ${stats.size > MAX_RESOURCE_SIZE}`
+    );
+    if (stats.size > MAX_RESOURCE_SIZE) return false;
+  } catch (error) {
+    return false;
+  }
+
+  const mimetype = mime.getType(filename);
+  if (null === mimetype) return false;
+  return claudeSupportedMimeTypes.some((supported) => {
+    if (!supported.includes("/*")) return supported === mimetype;
+
+    const supportedMainType = supported.split("/")[0];
+    const mainType = mimetype?.split("/")[0];
+    return supportedMainType === mainType;
+  });
+}
+
 server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
   const resourcename = request.params.uri;
+  const file = path.basename(resourcename);
+  const mimeType = mime.getType(request.params.uri) || FALLBACK_MIME_TYPE;
+
+  const content = treatAsText(mimeType)
+    ? { text: await fs.readFile(file, "utf-8") }
+    : { blob: (await fs.readFile(file)).toString("base64") };
+
   return {
     contents: [
       {
         uri: request.params.uri,
-        text: `Use the file "${request.params.uri}"`,
-        mimetype: `text/plain`,
+        mimeType: mimeType,
+        ...content,
       },
     ],
   };

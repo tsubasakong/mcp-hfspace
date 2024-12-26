@@ -16,7 +16,7 @@
     "type": "git",
     "url": "git+https://github.com/evalstate/mcp-hfspace"
   },
-  "bugs":{
+  "bugs": {
     "url": "https://github.com/evalstate/mcp-hfspace/issues"
   },
   "scripts": {
@@ -32,6 +32,7 @@
   "dependencies": {
     "@gradio/client": "^1.8.0",
     "@modelcontextprotocol/sdk": "0.6.0",
+    "mime": "^4.0.6",
     "minimist": "^1.2.8"
   },
   "devDependencies": {
