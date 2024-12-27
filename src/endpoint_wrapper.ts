@@ -245,7 +245,7 @@ export class EndpointWrapper {
   ): Promise<CallToolResult> {
     let events = [];
     try {
-      let result;
+      let result = null;
       const submission: AsyncIterable<GradioEvent> = this.client.submit(
         this.endpointPath.endpoint,
         parameters
@@ -258,7 +258,9 @@ export class EndpointWrapper {
             const hasContent = msg.data.some(
               (item: unknown) => typeof item !== "object"
             );
+
             if (hasContent) result = msg.data;
+            if (null === result) result = msg.data;
           }
         } else if (msg.type === "status") {
           if (msg.stage === "error") {
