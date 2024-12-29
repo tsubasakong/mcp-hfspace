@@ -133,14 +133,33 @@ server.setRequestHandler(GetPromptRequestSchema, async (request) => {
   return await endpoint.getPromptTemplate(request.params.arguments);
 });
 
-function fileToUri(file: Dirent) {
+async function fileToUri(file: Dirent) {
   const fullPath = path.join(file.parentPath || "", file.name);
   const relativePath = path
     .relative(config.workDir, fullPath)
     .replace(/\\/g, "/"); // ensure forward slashes
 
-  // Create proper file URI
-  return `file:./${relativePath}`;
+  // Get file stats
+  const stats = await fs.stat(fullPath);
+
+  return {
+    uri: `file:./${relativePath}`,
+    size: stats.size,
+    lastModified: stats.mtime
+  };
+}
+
+function formatFileSize(bytes: number): string {
+  const units = ['B', 'KB', 'MB', 'GB'];
+  let size = bytes;
+  let unitIndex = 0;
+  
+  while (size >= 1024 && unitIndex < units.length - 1) {
+    size /= 1024;
+    unitIndex++;
+  }
+  
+  return `${size.toFixed(1)} ${units[unitIndex]}`;
 }
 
 async function availableResourcesPrompt() {
@@ -149,21 +168,22 @@ async function availableResourcesPrompt() {
     recursive: true,
   });
 
-  const fileList = files
-    .filter((entry) => entry.isFile())
-    .map((entry) => {
-      const fileUri = fileToUri(entry);
+  const fileList = await Promise.all(
+    files
+      .filter((entry) => entry.isFile())
+      .map(async (entry) => {
+        const fileInfo = await fileToUri(entry);
+        const mimeType = mime.getType(entry.name) || FALLBACK_MIME_TYPE;
 
-      // Get MIME type with fallback
-      const mimeType = mime.getType(entry.name) || FALLBACK_MIME_TYPE;
-
-      return {
-        uri: fileUri,
-        name: entry.name,
-        mimeType,
-      };
-    })
-    .map(({ uri, name, mimeType }) => `| ${uri} | ${name} | ${mimeType} |`);
+        return {
+          uri: fileInfo.uri,
+          name: entry.name,
+          mimeType,
+          size: formatFileSize(fileInfo.size),
+          lastModified: fileInfo.lastModified.toISOString()
+        };
+      })
+  );
 
   const content =
     fileList.length == 0
@@ -172,9 +192,9 @@ async function availableResourcesPrompt() {
           type: "text",
           text: `
     The following resources are available for tool calls:
-| Resource URI | Name | MIME Type |
-|--------------|----- |-----------|
-${fileList.join("\n")}
+| Resource URI | Name | MIME Type | Size | Last Modified |
+|--------------|------|-----------|------|---------------|
+${fileList.map(f => `| ${f.uri} | ${f.name} | ${f.mimeType} | ${f.size} | ${f.lastModified} |`).join("\n")}
     
 Prefer using the Resource URI for tool parameters which require a file input. URLs are also accepted.`.trim(),
         };
@@ -203,13 +223,13 @@ server.setRequestHandler(ListResourcesRequestSchema, async () => {
     );
 
     return {
-      resources: supportedFiles
+      resources: await Promise.all(supportedFiles
         .filter(({ isSupported }) => isSupported)
-        .map(({ entry }) => ({
-          uri: fileToUri(entry),
+        .map(async ({ entry }) => ({
+          uri: (await fileToUri(entry)).uri,
           name: `${entry.name}`,
           mimetype: mime.getType(entry.name) || FALLBACK_MIME_TYPE,
-        })),
+        }))),
     };
   } catch (error) {
     if (error instanceof Error) {
