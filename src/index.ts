@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 const AVAILABLE_RESOURCES = "Available Resources";
+const AVAILABLE_FILES = "available-files";
 
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { VERSION } from "./version.js";
@@ -73,13 +74,38 @@ if (endpoints.size === 0) {
 
 server.setRequestHandler(ListToolsRequestSchema, async () => {
   return {
-    tools: Array.from(endpoints.values()).map((endpoint) =>
-      endpoint.toolDefinition()
-    ),
+    tools: [
+      {
+        name: AVAILABLE_FILES,
+        description:
+          "A list of available file and resources. " +
+          "If the User requests things like 'most recent image' or 'the audio' use " +
+          "this tool to identify the intended resource." +
+          "This tool returns 'resource uri', 'name', 'size', 'last modified'  and 'mime type' in a markdown table",
+        inputSchema: {
+          type: "object",
+          properties: {},
+        },
+      },
+      ...Array.from(endpoints.values()).map((endpoint) =>
+        endpoint.toolDefinition()
+      ),
+    ],
   };
 });
 
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
+  if (AVAILABLE_FILES === request.params.name) {
+    return {
+      content: [
+        {
+          type: `text`,
+          text: await workingDir.generateResourceTable(),
+        },
+      ],
+    };
+  }
+
   const endpoint = endpoints.get(request.params.name);
 
   if (!endpoint) {
