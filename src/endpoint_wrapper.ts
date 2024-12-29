@@ -18,42 +18,15 @@ import { GradioConverter } from "./content_converter.js";
 import { config } from "./config.js";
 import * as path from "path";
 import type { StatusMessage, Payload } from "@gradio/client";
+import { WorkingDirectory } from "./working_directory.js";
 
 type GradioEvent = StatusMessage | Payload;
 
 async function validatePath(filePath: string): Promise<string> {
-  try {
-    // Early return for http/https URLs
-    if (filePath.startsWith("http://") || filePath.startsWith("https://")) {
-      return filePath; // Pass through unchanged
-    }
-
-    // Handle file:// and file:./ URIs
-    if (filePath.startsWith("file:")) {
-      filePath = filePath.replace(/^file:(?:\/\/|\.\/)/, "");
-    }
-
-    // Rest of function unchanged - normal path processing
-    const normalizedFilePath = path.normalize(path.resolve(filePath));
-    const normalizedCwd = path.normalize(process.cwd());
-
-    if (!normalizedFilePath.startsWith(normalizedCwd)) {
-      throw new Error(`Path ${filePath} is outside of working directory`);
-    }
-
-    // Check if file exists
-    await fs.access(normalizedFilePath);
-    return normalizedFilePath;
-  } catch (error) {
-    if (error instanceof Error) {
-      throw new Error(
-        `Invalid or missing file: ${filePath} (${error.message})`
-      );
-    } else {
-      throw new Error(`Invalid or missing file: ${filePath}`);
-    }
-  }
+  const workingDir = new WorkingDirectory(process.cwd());
+  return workingDir.validatePath(filePath);
 }
+
 export interface EndpointPath {
   owner: string;
   space: string;
@@ -97,14 +70,20 @@ export function parsePath(path: string): EndpointPath {
 }
 
 export class EndpointWrapper {
+  private converter: GradioConverter;
+
   constructor(
     private endpointPath: EndpointPath,
     private endpoint: ApiEndpoint,
-    private client: Client
-  ) {}
+    private client: Client,
+    private workingDir: WorkingDirectory
+  ) {
+    this.converter = new GradioConverter(workingDir);
+  }
 
   static async createEndpoint(
-    configuredPath: string
+    configuredPath: string,
+    workingDir: WorkingDirectory
   ): Promise<EndpointWrapper> {
     const pathParts = configuredPath.split("/");
     if (pathParts.length < 2 || pathParts.length > 3) {
@@ -145,7 +124,8 @@ export class EndpointWrapper {
       return new EndpointWrapper(
         parsePath(configuredPath),
         api.named_endpoints[endpointTarget],
-        gradio
+        gradio,
+        workingDir
       );
     }
 
@@ -157,7 +137,8 @@ export class EndpointWrapper {
       return new EndpointWrapper(
         parsePath(`${configuredPath}${preferredApi}`),
         api.named_endpoints[preferredApi],
-        gradio
+        gradio,
+        workingDir
       );
     }
 
@@ -167,7 +148,8 @@ export class EndpointWrapper {
       return new EndpointWrapper(
         parsePath(`${configuredPath}${firstNamed[0]}`),
         firstNamed[1],
-        gradio
+        gradio,
+        workingDir
       );
     }
 
@@ -181,11 +163,16 @@ export class EndpointWrapper {
       return new EndpointWrapper(
         parsePath(`${configuredPath}/${validUnnamed[0]}`),
         validUnnamed[1],
-        gradio
+        gradio,
+        workingDir
       );
     }
 
     throw new Error(`No valid endpoints found for ${configuredPath}`);
+  }
+
+  async validatePath(filePath: string): Promise<string> {
+    return this.workingDir.validatePath(filePath);
   }
 
   /* Endpoint Wrapper */
@@ -225,7 +212,7 @@ export class EndpointWrapper {
         (p) => p.parameter_name === key || p.label === key
       );
       if (param && isFileParameter(param) && typeof value === "string") {
-        const file = await validatePath(value);
+        const file = await this.validatePath(value);
         parameters[key] = handle_file(file);
       }
     }
@@ -304,11 +291,7 @@ export class EndpointWrapper {
 
     for (const [index, output] of returns.entries()) {
       const value = predictResults[index];
-      const converted = await GradioConverter.convert(
-        output,
-        value,
-        endpointPath
-      );
+      const converted = await this.converter.convert(output, value, endpointPath);
       content.push(converted);
     }
 

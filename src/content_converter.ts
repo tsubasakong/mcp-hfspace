@@ -9,6 +9,7 @@ import { pathToFileURL } from "url";
 import path from "path";
 import { config } from "./config.js";
 import { EndpointPath } from "./endpoint_wrapper.js";
+import { WorkingDirectory } from "./working_directory.js";
 
 // Add types for Gradio component values
 interface GradioResourceValue {
@@ -49,13 +50,20 @@ type ConverterFn = (
 const defaultConverter: ConverterFn = async () => null;
 
 export class GradioConverter {
-  private static converters: Map<string, ContentConverter> = new Map();
+  private converters: Map<string, ContentConverter> = new Map();
+  
+  constructor(private readonly workingDir: WorkingDirectory) {
+    // Register converters with fallback behavior
+    this.register(GradioComponentType.Image, withFallback(this.imageConverter.bind(this)));
+    this.register(GradioComponentType.Audio, withFallback(this.audioConverter.bind(this)));
+    this.register(GradioComponentType.Chatbot, withFallback(async () => null));
+  }
 
-  static register(component: string, converter: ContentConverter) {
+  register(component: string, converter: ContentConverter) {
     this.converters.set(component, converter);
   }
 
-  static async convert(
+  async convert(
     component: ApiReturn,
     value: GradioResourceValue,
     endpointPath: EndpointPath
@@ -63,11 +71,89 @@ export class GradioConverter {
     if (config.debug) {
       await fs.writeFile(generateFilename("debug","json",endpointPath.mcpToolName), JSON.stringify(value,null,2));
     }
-    const converter =
-      this.converters.get(component.component) ||
+    const converter = this.converters.get(component.component) ||
       withFallback(defaultConverter);
     return converter(component, value, endpointPath);
   }
+
+  private async saveFile(
+    arrayBuffer: ArrayBuffer,
+    mimeType: string,
+    prefix: string,
+    mcpToolName: string,
+    originalExtension?: string | null
+  ): Promise<string> {
+    const extension = originalExtension || mimeType.split("/")[1] || "bin";
+    const filename = await this.workingDir.generateFilename(prefix, extension, mcpToolName);
+    await this.workingDir.saveFile(arrayBuffer, filename);
+    return filename;
+  }
+
+  private readonly imageConverter: ConverterFn = async (_component, value, endpointPath) => {
+    if (!value?.url) return null;
+    try {
+      const response = await convertUrlToBase64(value.url, value);
+      
+      try {
+        await this.saveFile(
+          response.arrayBuffer, 
+          response.mimeType, 
+          GradioComponentType.Image,
+          endpointPath.mcpToolName, 
+          response.originalExtension
+        );
+      } catch (saveError) {
+        if (config.claudeDesktopMode) {
+          console.error(`Failed to save image file: ${saveError instanceof Error ? saveError.message : String(saveError)}`);
+        } else {
+          throw saveError;
+        }
+      }
+      
+      return {
+        type: "image",
+        data: response.base64Data,
+        mimeType: response.mimeType,
+      };
+    } catch (error) {
+      console.error("Image conversion failed:", error);
+      return createTextContent(_component, `Failed to load image: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  };
+
+  private readonly audioConverter: ConverterFn = async (_component, value, endpointPath) => {
+    if (!value?.url) return null;
+    try {
+      const { mimeType, base64Data, arrayBuffer, originalExtension } = await convertUrlToBase64(value.url, value);
+      const filename = await this.saveFile(arrayBuffer, mimeType, "audio", endpointPath.mcpToolName, originalExtension);
+
+      if (config.claudeDesktopMode) {
+        return {
+          type: "resource",
+          resource: {
+            uri: `${pathToFileURL(path.resolve(filename)).href}`,
+            mimetype: `text/plain`,
+            text: `Your audio was succesfully created and is available for playback at ${path.resolve(filename)}. Claude Desktop does not currently support audio content`,
+          },
+        };
+      } else {
+        return {
+          type: "resource",
+          resource: {
+            uri: `${pathToFileURL(path.resolve(filename)).href}`,
+            mimeType,
+            blob: base64Data,
+          },
+        };
+      }
+    } catch (error) {
+      console.error("Audio conversion failed:", error);
+      return {
+        type: "text",
+        text: `Failed to load audio: ${(error as Error).message}`,
+      };
+    }
+  };
 }
 
 // Shared text content creator
@@ -170,104 +256,3 @@ const convertUrlToBase64 = async (url: string, value: GradioResourceValue): Prom
   
   return { mimeType, base64Data, arrayBuffer, originalExtension };
 };
-
-// Update saveFile to include space name
-const saveFile = async (
-  arrayBuffer: ArrayBuffer,
-  mimeType: string,
-  prefix: string,
-  mcpToolName: string,
-  originalExtension?: string | null
-): Promise<string> => {
-  const extension = originalExtension || mimeType.split("/")[1] || "bin";
-  const filename = generateFilename(prefix, extension, mcpToolName);
-  await fs.writeFile(filename, Buffer.from(arrayBuffer), {
-    encoding: "binary",
-  });
-  return filename;
-};
-
-// Update converters to use space information
-const imageConverter: ConverterFn = async (_component, value, endpointPath) => {
-  if (!value?.url) return null;
-  try {
-    const response = await convertUrlToBase64(value.url, value);
-    
-    // Try to save file but don't let failure stop processing
-    try {
-      await saveFile(
-        response.arrayBuffer, 
-        response.mimeType, 
-        GradioComponentType.Image,
-        endpointPath.mcpToolName, 
-        response.originalExtension
-      );
-    } catch (saveError) {
-      if (config.claudeDesktopMode) {
-        console.error(`Failed to save image file: ${saveError instanceof Error ? saveError.message : String(saveError)}`);
-      } else {
-        throw saveError; // Re-throw if not in desktop mode
-      }
-    }
-    
-    return {
-      type: "image",
-      data: response.base64Data,
-      mimeType: response.mimeType,
-    };
-  } catch (error) {
-    console.error("Image conversion failed:", error);
-    return createTextContent(_component, `Failed to load image: ${error instanceof Error ? error.message : String(error)}`);
-  }
-};
-
-const audioConverter: ConverterFn = async (_component, value, endpointPath) => {
-  if (!value?.url) return null;
-  try {
-    const { mimeType, base64Data, arrayBuffer, originalExtension } = await convertUrlToBase64(
-      value.url,
-      value
-    );
-    const filename = await saveFile(
-      arrayBuffer,
-      mimeType,
-      "audio",
-      endpointPath.mcpToolName,
-      originalExtension
-    );
-
-    if (config.claudeDesktopMode) {
-      return {
-        type: "resource",
-        resource: {
-          uri: `${pathToFileURL(path.resolve(filename)).href}`,
-          mimetype: `text/plain`,
-          text: `Your audio was succesfully created and is available for playback at ${path.resolve(filename)}. Claude Desktop does not currently support audio content`,
-        },
-      };
-    } else {
-      return {
-        type: "resource",
-        resource: {
-          uri: `${pathToFileURL(path.resolve(filename)).href}`,
-          mimeType,
-          blob: base64Data,
-        },
-      };
-    }
-  } catch (error) {
-    console.error("Audio conversion failed:", error);
-    return {
-      type: "text",
-      text: `Failed to load audio: ${(error as Error).message}`,
-    };
-  }
-};
-
-// Register converters with fallback behavior
-GradioConverter.register(GradioComponentType.Image, withFallback(imageConverter));
-GradioConverter.register(GradioComponentType.Audio, withFallback(audioConverter));
-GradioConverter.register(
-  GradioComponentType.Chatbot,
-  withFallback(async () => null)
-);
