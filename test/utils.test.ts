@@ -408,7 +408,7 @@ describe("file and blob type conversions", () => {
 
     expect(result).toMatchObject({
       type: "string",
-      description: "Accepts: URL, file path, or resource identifier",
+      description: "Accepts: URL, file path, file name, or resource identifier",
     });
   });
 
@@ -431,7 +431,7 @@ describe("file and blob type conversions", () => {
     
     expect(result).toMatchObject({
       type: "string",
-      description: "Accepts: URL, file path, or resource identifier",
+      description: "Accepts: URL, file path, file name, or resource identifier",
     });
   });
 
@@ -455,7 +455,7 @@ describe("file and blob type conversions", () => {
     
     expect(result).toMatchObject({
       type: "string",
-      description: "Accepts: Audio file URL, file path, or resource identifier",
+      description: "Accepts: Audio file URL, file path, file name, or resource identifier",
     });
   });
 
@@ -481,7 +481,7 @@ describe("file and blob type conversions", () => {
 
     expect(result).toMatchObject({
       type: "string",  // Should always be "string" for file inputs
-      description: "Accepts: Audio file URL, file path, or resource identifier",
+      description: "Accepts: Audio file URL, file path, file name, or resource identifier",
     });
   });
 
@@ -504,7 +504,7 @@ describe("file and blob type conversions", () => {
 
     expect(result).toMatchObject({
       type: "string",
-      description: "Accepts: Image file URL, file path, or resource identifier",
+      description: "Accepts: Image file URL, file path, file name, or resource identifier",
     });
   });
 });

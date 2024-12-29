@@ -48,7 +48,7 @@ export function convertParameter(param: ApiParameter): ParameterSchema {
   if (isFileParameter(param)) {
     baseType = "string"; // Always string for file inputs
     if (param.component === "Audio") {
-      baseDescription = "Accepts: Audio file URL, file path,file name,  or resource identifier";
+      baseDescription = "Accepts: Audio file URL, file path, file name, or resource identifier";
     } else if (param.component === "Image") {
       baseDescription = "Accepts: Image file URL, file path, file name, or resource identifier";
     } else {
