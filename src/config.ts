@@ -1,5 +1,6 @@
 import minimist from 'minimist';
 import path from 'path';
+import { mkdirSync } from 'fs';
 
 export interface Config {
   claudeDesktopMode: boolean;
@@ -24,9 +25,9 @@ export function parseConfig(): Config {
     '--': true,
   });
 
-  return {
+  const config = {
     claudeDesktopMode: argv['desktop-mode'],
-    workDir: path.resolve(argv['work-dir']),
+    workDir: path.resolve(argv['work-dir']) || process.cwd(),
     hfToken: argv['hf-token'],
     debug: argv['debug'],
     spacePaths: (() => {
@@ -36,4 +37,20 @@ export function parseConfig(): Config {
         : ["evalstate/FLUX.1-schnell"];
     })()
   };
+
+  if (config.debug) {
+    console.log('Config:', {
+      ...config,
+      hfToken: config.hfToken ? 'Token present' : 'No token',
+    });
+  }
+
+  try {
+    mkdirSync(config.workDir, { recursive: true });
+  } catch (error) {
+    console.warn(`Could not create working directory ${config.workDir}, using current directory`);
+    config.workDir = process.cwd();
+  }
+
+  return config;
 }

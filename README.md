@@ -200,3 +200,7 @@ On Windows: `%APPDATA%/Claude/claude_desktop_config.json`
 - If ZeroGPU quotas or queues are too long, try duplicating the space. If your job takes less than sixty seconds, you can usually change the function decorator `@spaces.GPU(duration=20)` in `app.py` to request less quota when running the job.
 - If you have a HuggingFace Pro account, please note that The Gradio API does not your additional quote for ZeroGPU jobs - you will need to set an `X-IP-Token` header to achieve that.
 - If you have a private space, and dedicated hardware your HF_TOKEN will give you direct access to that - no quota's apply. I recommend this if you are using for any kind of Production task.
+
+
+## 
+local test `node build/index.js --debug Qwen/Qwen2-72B-Instruct`

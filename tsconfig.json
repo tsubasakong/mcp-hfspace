@@ -10,6 +10,7 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "types": ["node"],
+    "lib": ["es2020", "esnext"],
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules"]

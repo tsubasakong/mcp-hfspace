@@ -235,10 +235,12 @@ const determineMimeType = (value: any, responseHeaders: Headers): string => {
   return 'text/plain';
 };
 
+type HeaderMap = Record<string, string>;
+
 const convertUrlToBase64 = async (url: string, value: GradioResourceValue): Promise<ResourceResponse> => {
-  const headers: HeadersInit = {};
+  const headers: HeaderMap = {};
   if (config.hfToken) {
-    headers.Authorization = `Bearer ${config.hfToken}`;
+    headers["Authorization"] = `Bearer ${config.hfToken}`;
   }
 
   const response = await fetch(url, { headers });

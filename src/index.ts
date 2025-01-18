@@ -39,8 +39,13 @@ const server = new Server(
 // Parse configuration
 const config = parseConfig();
 
-// Change to configured working directory
-process.chdir(config.workDir);
+// Change to configured working directory - Add error handling
+try {
+  process.chdir(config.workDir);
+} catch (error) {
+  console.error(`Failed to change to working directory ${config.workDir}. Using current directory instead.`);
+  config.workDir = process.cwd(); // Use current directory as fallback
+}
 
 const workingDir = new WorkingDirectory(
   config.workDir,
